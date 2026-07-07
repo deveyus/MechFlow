@@ -8,76 +8,56 @@ No build step is required. Templates are served as raw HTML.
 
 ## Attribute Reference
 
-### `s-text`
+### `mf-text`
 
 Sets `textContent` of an element to a field's value:
 
 ```html
-<span s-text="hp"></span>
+<span mf-text="hp"></span>
 ```
 
-### `s-bind`
+### `mf-bind`
 
-Binds an attribute to a field value:
+Binds an attribute to one or more field values using positional template syntax:
 
 ```html
-<div class="hp-fill" s-bind:style="hpPercent"></div>
-<input s-bind:disabled="isDead">
+<div mf-bind:style="width:{0}% | hpPercent"></div>
+<div mf-bind:style="width:{0}%; background:{1} | hpPercent, hpColor"></div>
+<input mf-bind:disabled="isDead">
 ```
 
-The attribute value can include a pipe-separated transformation:
+The format is `template | field1, field2, ...`. `{0}` is replaced by field1's value, `{1}` by field2's, etc.
 
-```html
-<div s-bind:style="hpPercent | width:{0}%"></div>
-```
-
-### `s-toggle`
+### `mf-toggle`
 
 Toggles a CSS class based on a boolean field:
 
 ```html
-<div s-toggle="bloodied">Bloodied!</div>
-<div s-toggle="isDead | hidden">Dead</div>
+<div mf-toggle="bloodied">Bloodied!</div>
 ```
 
-### `s-on`
+### `mf-on`
 
 Wire DOM events to event emitter calls:
 
 ```html
-<button s-on:click="takeDamage:5">Hit</button>
+<button mf-on:click="takeDamage:5">Hit</button>
 ```
 
 The value format is `eventName:arg1,arg2` — calls `system.fire(eventName, args)`.
 
 ## Initialization
 
-A base class or mixin provides the binding lifecycle:
+A single function call registers a template as a live web component:
 
-```js
-class MechComponent extends HTMLElement {
-  connectedCallback() {
-    walkBindings(this.shadowRoot).for((attr, field, transform) => {
-      subscribe(field, (value) => {
-        applyBinding(this, attr, transform(value))
-      })
-    })
-  }
-}
+```ts
+import { flow } from 'mechflow'
+import html from './hp-bar.html' with { type: 'html' }
+
+flow('hp-bar', html)
 ```
 
-A custom element author imports the base class and provides the template:
-
-```js
-class HpBar extends MechComponent {
-  constructor() {
-    super()
-    this.attachShadow({ mode: 'open' })
-    this.shadowRoot.append(hpTemplate.content.cloneNode(true))
-  }
-}
-customElements.define('hp-bar', HpBar)
-```
+`flow()` handles shadow DOM attachment, binding walker initialization, and lifecycle cleanup automatically. No class definition, no `connectedCallback`, no `customElements.define()`.
 
 ## Lifecycle
 
@@ -91,13 +71,13 @@ customElements.define('hp-bar', HpBar)
 
 ## Scope
 
-Bindings resolve field names against the system's field registry. A component can opt into a specific scope by setting the `s-scope` attribute on the host element:
+Bindings resolve field names against the system's field registry. A component can opt into a specific scope by setting the `mf-scope` attribute on the host element:
 
 ```html
-<hp-bar s-scope="player-1"></hp-bar>
+<hp-bar mf-scope="player-1"></hp-bar>
 ```
 
-The scope is passed through to `subscribe(field, handler, { scope })`, allowing the same component template to bind to different state instances.
+The scope is passed through to the subscription layer, allowing the same component template to bind to different state instances.
 
 ## Constraints
 

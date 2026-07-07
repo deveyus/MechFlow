@@ -37,11 +37,14 @@ This inferred type flows into all subscribers, chains, and tick results.
 
 ## Typed Events
 
-Events carry a typed payload:
+Events carry a typed payload. Passing an explicit interface is the standard convention:
 
 ```ts
-const damage = event<{ amount: number; source: string }>('damage:taken')
-const heal   = event<{ amount: number }>('heal:applied')
+interface DamageEvent { amount: number; source: string }
+interface HealEvent   { amount: number }
+
+const damage = event<DamageEvent>('damage:taken')
+const heal   = event<HealEvent>('heal:applied')
 const tick   = event<void>('turn:start')
 ```
 
@@ -66,7 +69,7 @@ subscribe(damage, (ctx: SubscriberContext<typeof damage, typeof system>) => {
   // ctx.payload.amount        → number
   // ctx.tick                  → number
   return Ok({ hp: ctx.current.hp - ctx.payload.amount })
-})
+}).id('raw-damage').after('armor')
 ```
 
 The `SubscriberContext<E, S>` generic picks up:
@@ -104,10 +107,9 @@ ctx.chain.find('heal') // ChainLink<S> | undefined
 Subscriber IDs used in `before`/`after` are validated against a union type derived from all registered subscribers:
 
 ```ts
-subscribe(damage, handler, {
-  id: 'apply-damage',
-  after: 'nonexistent-id',  // Compile error if 'nonexistent-id' not in subscriber IDs
-})
+subscribe(damage, handler)
+  .id('apply-damage')
+  .after('nonexistent-id')  // Compile error if 'nonexistent-id' not in subscriber IDs
 ```
 
 This prevents ordering references to subscribers that don't exist.

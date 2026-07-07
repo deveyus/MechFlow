@@ -20,25 +20,29 @@ const status = field<Status>('status', { default: 'healthy' })
 Define a named event that subscribers can listen for.
 
 ```ts
-const damageTaken = event<{ amount: number }>('damage:taken')
+interface DamageEvent { amount: number; source: string }
+const damageTaken = event<DamageEvent>('damage:taken')
+
+// Events without a payload use void (the default)
 const turnStart = event('turn:start')
 ```
 
-Events carry an optional typed payload that subscribers receive in their context.
+Events carry a typed payload that subscribers receive in their context. Passing an explicit interface is the standard convention — it makes the contract visible at the definition site.
 
 ## Subscriptions
 
-### `subscribe<E, S>(event: Event<E>, handler: SubscriberHandler<E, S>, options?: SubscriberOptions): Subscription`
+### `subscribe<E, S>(event: Event<E>, handler: SubscriberHandler<E, S>): SubscriptionBuilder`
 
-Register a subscriber to run when an event fires.
+Register a subscriber to run when an event fires. Returns a builder for chaining id, ordering, and priority.
 
 ```ts
 subscribe(damageTaken, (ctx) => {
   return Ok({ hp: ctx.current.hp - ctx.payload.amount })
-}, {
-  after: armorSoak,
-  id: 'raw-damage'
 })
+  .id('raw-damage')
+  .after('armor-soak')
+  .before('heal-process', 'enrage-check')
+  .priority('early')
 ```
 
 ### SubscriberHandler
@@ -49,13 +53,23 @@ subscribe(damageTaken, (ctx) => {
 
 Receives the full context and returns either a delta (partial state update) or an error.
 
-### SubscriberOptions
+### SubscriptionBuilder
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `id` | `string` | Unique identifier for ordering references |
-| `before` | `string \| string[]` | Subscriber IDs this must run before |
-| `after` | `string \| string[]` | Subscriber IDs this must run after |
+```
+SubscriptionBuilder {
+  id(name: string): this
+  before(...ids: string[]): this
+  after(...ids: string[]): this
+  priority(hint: 'early' | 'late'): this
+}
+```
+
+| Method | Description |
+|--------|-------------|
+| `.id(name)` | Unique identifier for ordering references |
+| `.before(...ids)` | Subscriber IDs this must run before |
+| `.after(...ids)` | Subscriber IDs this must run after |
+| `.priority(hint)` | Soft hint: schedule as early or late as constraints allow |
 
 ## Chain
 
@@ -115,6 +129,21 @@ return Ok({ hp: ctx.current.hp - 5 })
 // Failure — no delta applied, error link appended
 return Err(new SubscriberError('not enough rage', { rage: ctx.current.rage }))
 ```
+
+## Component Registration
+
+### `flow(name: string, template: HTMLTemplateElement): void`
+
+Register a Web Component from a template HTML element. Handles shadow DOM attachment, binding walker initialization, and lifecycle.
+
+```ts
+import { flow } from 'mechflow'
+import html from './hp-bar.html' with { type: 'html' }
+
+flow('hp-bar', html)
+```
+
+The binding attributes in the template are resolved automatically at runtime. No component class boilerplate is needed.
 
 ## System
 
