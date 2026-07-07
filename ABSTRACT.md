@@ -54,7 +54,7 @@ Failures never abort a tick. All subscribers run regardless of prior errors. The
 
 There is no per-field merge strategy. The ordering graph **is** the merge strategy:
 
-- Each subscriber declares `before` / `after` constraints alongside its subscription.
+- Each subscriber declares `before` / `after` constraints via chained `.after().before()` calls on its subscription builder.
 - These partial ordering edges are collected centrally at boot.
 - A topological sort (Kahn's algorithm, O(V+E)) resolves the partials into a total order.
 - Deltas apply in that resolved sequence. For any given field, the later subscriber wins.
@@ -71,7 +71,7 @@ Views are Web Components that import from the reactive core. The component decla
 
 ### Declarative View Binding (Runtime)
 
-Templates use declarative binding attributes (e.g., `s-text`, `s-bind`, `s-toggle`) in the HTML. A small runtime walks the shadow DOM in `connectedCallback` and wires these attributes to the reactive core. No build step is needed for templates — the HTML can be served as-is. This is the same operational model as HTMX: minimal runtime, declarative HTML, no compilation.
+Templates use declarative binding attributes (e.g., `mf-text`, `mf-bind`, `mf-toggle`) in the HTML. A small runtime walks the shadow DOM in `connectedCallback` and wires these attributes to the reactive core. No build step is needed for templates — the HTML can be served as-is. This is the same operational model as HTMX: minimal runtime, declarative HTML, no compilation.
 
 ### Type-Driven API
 
