@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 MechFlow contributors
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: EUPL-1.2
 
 import type { Field, Event, SubscriberRegistration, SubscriberHandler, FieldChangeCallback } from "./core/types.ts";
 import type { Chain, ChainLink, SubscriberContext, SubscriberError, PriorityHint, Delta } from "./core/types.ts";

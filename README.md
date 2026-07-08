@@ -1,112 +1,289 @@
 # MechFlow
 
-Reactive state management for web components with explicit ordering, typed events, and no magic.
+**Deterministic state management for applications that can't afford surprises.**
 
-- **17KB** self-contained ESM bundle — zero runtime dependencies
-- **~100,000 ticks/sec** with 10 subscribers (well under 0.1ms per tick)
-- **~900 ticks/sec** with 2000 subscribers (~1.1ms per tick — fitting 14 ticks within a 60fps frame)
+A zero-dependency reactive library where ordering is declared, errors never abort, and every state change leaves a receipt.
 
-## Core Idea
+---
 
-State is a flat map of named fields. Events trigger ticks. Each tick runs subscribers in a resolved total order derived from explicit `before`/`after` constraints. Subscribers return `Result<Delta, SubscriberError>` — Ok applies the delta, Err appends an error link without changing state. The chain of all deltas is passed to each subscriber, providing a complete audit trail within a tick.
+## 1. The Basics: an event, a subscriber, a state change
 
-No implicit dependency tracking. No computed properties. No merge strategies. Ordering IS the merge strategy — later writer wins per field.
-
-## Quick Start
+State is a flat map of named fields. The only way to change it is by firing an event. A subscriber receives the event payload and returns the fields it wants to update.
 
 ```ts
 import { field, event, createSystem, Ok } from 'mechflow'
 
-// 1. Define fields
-const hp = field('hp', { default: 20 })
-const status = field('status', { default: 'healthy' as string })
+// A field is a named state slot with a default value
+const balance = field('balance', { default: 0 })
 
-// 2. Define events
-interface DamageEvent { amount: number }
-const damageTaken = event<DamageEvent>('damage:taken')
+// An event carries a typed payload
+const deposited = event<{ amount: number }>('deposited')
 
-// 3. Create system
-const system = createSystem({
-  fields: [hp, status],
-  events: [damageTaken],
-})
+// A system ties fields and events together
+const sys = createSystem({ fields: [balance], events: [deposited] })
 
-// 4. Register subscribers
-system.subscribe(damageTaken, (ctx) => {
-  return Ok({ hp: ctx.chain.current.hp - ctx.payload.amount })
-}).id('apply-damage')
+// A subscriber returns Ok(delta) — the fields to merge into state
+sys.subscribe(deposited, ctx =>
+  Ok({ balance: ctx.chain.current.balance + ctx.payload.amount })
+)
 
-system.subscribe(damageTaken, (ctx) => {
-  if (ctx.chain.current.hp <= 10) {
-    return Ok({ status: 'bloodied' })
-  }
-  return Ok({})
-}).id('bloodied-check').after('apply-damage')
-
-// 5. Fire events
-const result = system.fire(damageTaken, { amount: 5 })
-console.log(result.state) // { hp: 15, status: 'healthy' }
+// Fire the event — the subscriber runs, state updates
+const r = sys.fire(deposited, { amount: 50 })
+console.log(r.state) // { balance: 50 }
 ```
+
+One field. One event. One subscriber. Fire → delta → new state. That's the core loop.
+
+---
+
+## 2. Ordering: when two subscribers depend on each other
+
+Add a second subscriber that needs to run *after* the first. Declare the relationship with `.after()`:
+
+```ts
+import { field, event, createSystem, Ok } from 'mechflow'
+
+const balance = field('balance', { default: 100 })
+const flag = field('flag', { default: '' as string })
+const withdrew = event<{ amount: number }>('withdrew')
+
+const sys = createSystem({ fields: [balance, flag], events: [withdrew] })
+
+// First: deduct the amount
+sys.subscribe(withdrew, ctx =>
+  Ok({ balance: ctx.chain.current.balance - ctx.payload.amount })
+).id('deduct')
+
+// Second: check the result — runs after 'deduct' because we declared it
+sys.subscribe(withdrew, ctx =>
+  Ok({ flag: ctx.chain.current.balance < 0 ? 'overdrawn' : 'clear' })
+).id('check').after('deduct')
+
+const r = sys.fire(withdrew, { amount: 150 })
+console.log(r.state) // { balance: -50, flag: 'overdrawn' }
+```
+
+The `check` subscriber sees the `balance` that `deduct` produced. It can also reach back with `ctx.chain.find('deduct')` to inspect any prior subscriber's delta or error.
+
+The system validates the full ordering graph at registration time. If you create a cycle, it throws immediately with the cycle path — not at runtime.
+
+---
+
+## 3. Errors: failing without aborting
+
+A subscriber returns `Err(error)` instead of `Ok(delta)` to signal failure. The error is recorded on the chain. The tick continues — all remaining subscribers still run.
+
+```ts
+import { field, event, createSystem, Ok, Err } from 'mechflow'
+
+const balance = field('balance', { default: 100 })
+const log = field('log', { default: '' as string })
+const withdrew = event<{ amount: number }>('withdrew')
+
+const sys = createSystem({ fields: [balance, log], events: [withdrew] })
+
+// Validate and deduct — fails if balance is insufficient
+sys.subscribe(withdrew, ctx =>
+  ctx.payload.amount > ctx.chain.current.balance
+    ? Err(new Error('insufficient funds'))
+    : Ok({ balance: ctx.chain.current.balance - ctx.payload.amount })
+).id('deduct')
+
+// Audit — runs regardless of whether 'deduct' succeeded or failed
+sys.subscribe(withdrew, ctx => {
+  const prev = ctx.chain.find('deduct')
+  return Ok({ log: prev?.error ? `failed: ${prev.error.message}` : 'approved' })
+}).id('audit').after('deduct')
+
+const ok = sys.fire(withdrew, { amount: 50 })
+console.log(ok.state)         // { balance: 50, log: 'approved' }
+console.log(ok.chain.find('deduct')?.error)  // undefined
+
+const fail = sys.fire(withdrew, { amount: 999 })
+console.log(fail.state)       // { balance: 50, log: 'failed: insufficient funds' }
+console.log(fail.chain.find('deduct')?.error?.message)  // 'insufficient funds'
+```
+
+Notice: on the second fire, `deduct` returned `Err`, so `balance` stayed at 50. But `audit` still ran — it read the error from the chain and set `log` accordingly.
+
+**Every subscriber runs, regardless of prior errors.** Errors are values, not exceptions. There is no corrupt state, no silent rollback, no partial update.
+
+---
+
+## Why not X?
+
+Every state library makes tradeoffs. Here's how MechFlow compares:
+
+| Concern | Redux | MobX / Signals | Zustand | **MechFlow** |
+|---------|-------|---------------|---------|-------------|
+| **Subscriber ordering** | Middleware chain only; reducer-to-reducer order is undefined | Not declared — depends on which computed was observed first | Not declared — hooks fire in component tree order | **Declared with `before`/`after`** |
+| **Error isolation** | One reducer throws, the whole store is undefined | A computed throws, the reactive graph poisons | A subscriber throws, the whole update drops | **Per-subscriber `Result` — failing never aborts the tick** |
+| **Audit trail** | DevTools only in development | None | None | **Chain object is always produced — production-grade tracing** |
+| **Dependency tracking** | Manual `mapStateToProps`, selectors | Implicit (getter interception) | Manual selectors, shallow compare | **Explicit — subscribers declare inputs via the chain** |
+| **Bundle size** | ~12KB (RTK) | ~16KB | ~2KB | **17KB self-contained** |
+| **Runtime deps** | Immer, Redux core, thunks etc. | None | None | **Zero** |
+
+---
+
+## When to use MechFlow
+
+- You need multi-step processing of events where **order matters** (payment → fraud check → audit log)
+- You want **provable error resilience** — a failed validation step shouldn't silently roll back a successful prior step, and it shouldn't prevent the audit step from running
+- You want a **production-grade audit trail** — every tick produces a chain object you can log, inspect, or replay
+- You want to **trust correctness** — the system validates the ordering graph at registration time; cycles throw with the full path before any state is touched
+
+## When NOT to use MechFlow
+
+- You have a simple counter or toggle — `useState` is fine. MechFlow pays for ordering and error isolation you don't need yet.
+- You want fully automatic reactivity (MobX/Signals) — MechFlow requires you to declare what depends on what. That's deliberate overhead for correctness.
+- You need routing, data fetching, or a build tool — MechFlow is state + view bindings only. Bring your own framework.
+- You're shipping to IE11 — the bundle uses modern JavaScript with no polyfills.
+
+---
+
+## Core Concepts (Reference)
+
+**Fields** are named state slots with a default value. They define the shape of the system and enable full TypeScript inference:
+```ts
+const hp = field('hp', { default: 100 })  // type: Field<number, 'hp'>
+```
+
+**Events** carry typed payloads. An interface defines the shape; `event()` wraps it:
+```ts
+interface DamageEvent { amount: number }
+const damaged = event<DamageEvent>('damaged')
+```
+
+**Subscribers** are functions that receive `{ chain, payload, tick, event }` and return `Result<Delta, Error>`:
+```ts
+sys.subscribe(damaged, ctx =>
+  Ok({ hp: ctx.chain.current.hp - ctx.payload.amount })
+).id('apply-damage')
+```
+
+**The Chain** is the ordered list of every subscriber's result within a tick:
+- `chain.first` — state when the event started
+- `chain.current` — state of the last successful subscriber (skips error links)
+- `chain.unsafeCurrent` — state of the last subscriber regardless
+- `chain.find(id)` — find a subscriber's result by its declared id
+- Chain is iterable — `for (const link of chain)` over the full history
+
+A subscriber can inspect any prior subscriber's state, delta, or error via `ctx.chain.find('some-subscriber-id')`.
+
+## Error Handling
+
+Errors are **never thrown** — they're returned as values and recorded on the chain.
+
+```ts
+sys.subscribe(charged, ctx => {
+  return ctx.payload.amount > ctx.chain.current.creditLimit
+    ? Err(new Error('card declined'))
+    : Ok({ balance: ctx.chain.current.balance - ctx.payload.amount })
+}).id('authorize').before('receipt')
+
+sys.subscribe(charged, ctx => {
+  const auth = ctx.chain.find('authorize')
+  return ctx.payload.amount > 10000 && !auth?.error
+    ? Ok({ fraudFlag: true })
+    : Ok({ fraudFlag: false })
+}).id('fraud-check').after('receipt')
+```
+
+If `authorize` fails, `balance` is not changed, but `fraud-check` still runs — it can inspect the error and react accordingly. All subscribers run regardless of prior errors.
+
+The state is always deterministic: errors leave the previous successful state in place. There is no partial update, no corrupt state, no silent rollback.
+
+## Explicit Ordering
+
+Order is declared at subscription time, not discovered at runtime:
+
+```ts
+sys.subscribe(event, handler).id('c').after('a').before('b')
+```
+
+The system resolves the graph using Kahn's topological sort. If you introduce a cycle, it throws immediately at registration time — with the full cycle path — rather than failing silently at runtime.
+
+**Priority hints** (`'early'` | `'late'`) provide soft ordering within the same topological layer. They never override hard `before`/`after` edges.
 
 ## View Layer (Browser)
 
-MechFlow provides declarative web component bindings via `flow()` and `mf-*` attributes:
+Declarative Web Component bindings with zero build step for templates:
 
 ```html
-<template id="hp-bar">
+<template id="status-bar">
   <div>
     <div mf-bind:style="width:{0}% | hpPercent" class="hp-fill"></div>
     <span mf-text="hp"></span> / <span mf-text="hpMax"></span>
-    <div mf-toggle="bloodied">BLOODIED</div>
+    <div mf-toggle="bloodied">CRITICAL</div>
+    <button mf-on:click="takeDamage:5">Hurt</button>
   </div>
 </template>
 
 <script type="module">
-  import { flow, useSystem } from './mod.js'
-  import { system } from './my-system.js'
+  import { flow, useSystem } from 'mechflow'
+  import { system } from './game-state.js'
 
   useSystem(system)
-  flow('hp-bar', document.getElementById('hp-bar'))
+  flow('status-bar', document.getElementById('status-bar'))
 </script>
 ```
 
-Attributes are resolved at runtime in `connectedCallback`. No build step required for templates.
+Current binding attributes:
+- `mf-text="fieldName"` — sets `textContent` reactively
+- `mf-bind:attr="template | field1, field2"` — binds an attribute from one or more fields using `{0}`, `{1}` positional references
+- `mf-toggle="fieldName"` — toggles `element.hidden` based on truthiness
+- `mf-on:event="handlerName:payload"` — wires DOM events to system events with optional payload parsing
+
+All attributes are resolved at runtime in `connectedCallback`. No build step required.
+
+## Performance
+
+Tick throughput on commodity hardware (single thread, no JIT warmup):
+
+| Subscribers | Time per tick | Ticks within 16ms (60fps) |
+|------------|---------------|--------------------------|
+| 10 | ~0.01ms | ~1,600 |
+| 100 | ~0.06ms | ~260 |
+| 500 | ~0.28ms | ~57 |
+| 2000 | ~1.12ms | ~14 |
+
+The hot path is a flat array dispatch with a reusable context object — no closures, no Map lookups, no class instantiation in the inner loop.
+
+**Bundle:** 17KB self-contained ESM (zero runtime dependencies).
+
+## Install
+
+```sh
+npm install mechflow
+# or
+deno add jsr:@mechflow/core
+```
+
+## Build
+
+```sh
+deno task build        # → dist/mechflow.js (self-contained ESM bundle)
+deno task build-testbed # → testbed/main.js
+```
+
+## Tests
+
+```sh
+deno task test                  # Core unit tests
+deno run src/e2e_test.ts        # Chromium headless e2e
+```
 
 ## Design Docs
 
 | Doc | What it covers |
 |-----|---------------|
-| [ABSTRACT.md](ABSTRACT.md) | Core principles, tick model, error handling, architecture |
+| [ABSTRACT.md](ABSTRACT.md) | Core principles, tick model, architecture |
 | [API.md](API.md) | Full API reference |
 | [TICK_LIFECYCLE.md](TICK_LIFECYCLE.md) | Walkthrough of a single tick |
-| [ORDERING.md](ORDERING.md) | Partial ordering, topological sort, priority hints |
+| [ORDERING.md](ORDERING.md) | Partial ordering, topological sort, priority |
 | [VIEW_BINDING.md](VIEW_BINDING.md) | Declarative mf-* binding attributes |
 | [TYPE_SYSTEM.md](TYPE_SYSTEM.md) | TypeScript integration and type inference |
 
-## Tests
+## License
 
-```sh
-# Core unit tests
-deno task test
-
-# Chromium headless e2e test (requires chromium-browser)
-deno run --no-check --allow-all src/e2e_test.ts
-```
-
-## Build
-
-### Library bundle (browser / npm)
-
-```sh
-deno task build
-```
-
-Produces `dist/mechflow.js` — a self-contained ESM bundle for browser use. No runtime dependencies.
-
-### Testbed
-
-```sh
-deno task build-testbed
-```
-
-Produces `testbed/main.js` from `testbed/main.ts`. Open `testbed/index.html` in a browser.
+EUPL-1.2 — see [LICENSE](LICENSE).
