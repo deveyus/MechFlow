@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 MechFlow contributors
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 import { field, event, createSystem, useSystem, Ok } from "../src/mod.ts";
 import { assertEquals } from "jsr:@std/assert";
 
@@ -105,7 +108,7 @@ Deno.test("error does not abort tick", () => {
   assertEquals(result.chain.at(2)?.error?.message, "oops");
 });
 
-Deno.test("ordering cycle is rejected", () => {
+Deno.test("compatible before/after constraints succeed", () => {
   const hp = field("hp", { default: 20 });
   const damageTaken = event<DamageEvent>("damage:taken");
 
@@ -196,12 +199,27 @@ Deno.test("chain convenience accessors work", () => {
     return Ok({ hp: ctx.chain.first.hp - ctx.payload.amount });
   }).id("hit");
 
+  system.subscribe(damageTaken, () => {
+    throw new Error("boom");
+  }).id("failing").after("hit");
+
+  system.subscribe(damageTaken, (ctx) => {
+    return Ok({ hp: ctx.chain.unsafeCurrent.hp + 3 });
+  }).id("recovery").after("failing");
+
   const result = system.fire(damageTaken, { amount: 5 });
 
+  // first = initial state
   assertEquals(result.chain.first.hp, 20);
-  assertEquals(result.chain.current.hp, 15);
-  assertEquals(result.chain.unsafeCurrent.hp, 15);
+  // current = last successful link (skips failing, goes to recovery)
+  assertEquals(result.chain.current.hp, 18); // 15 + 3
+  // unsafeCurrent = last link regardless (recovery's link)
+  assertEquals(result.chain.unsafeCurrent.hp, 18);
+  // Chain structure: init → hit → failing(error) → recovery
+  assertEquals(result.chain.links.length, 4);
   assertEquals(result.chain.at(0)?.state.hp, 20);
   assertEquals(result.chain.at(1)?.state.hp, 15);
+  assertEquals(result.chain.at(2)?.error?.message, "boom");
   assertEquals(result.chain.find("hit")?.subscriberId, "hit");
+  assertEquals(result.chain.find("failing")?.error?.message, "boom");
 });

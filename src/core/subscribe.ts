@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 MechFlow contributors
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 import type { Event, SubscriberHandler, SubscriberRegistration, PriorityHint } from "./types.ts";
 
 export class SubscriptionBuilder<S> {

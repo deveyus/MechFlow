@@ -35,7 +35,7 @@ Convenience accessors (`chain.first`, `chain.current`, `chain.unsafeCurrent`) ar
 
 ### Error Handling
 
-There are no exceptions. Errors are values using the `Result` pattern (`ts-results-es` / Rust-style):
+Subscriber errors are values using the `Result` pattern (Rust-style discriminated union), never thrown. System-integrity errors (cycles in ordering) throw — they represent programmer mistakes, not runtime conditions.
 
 - A subscriber returns `Result<Delta, SubscriberError>`.
 - If the result is `Ok(delta)`, the delta is applied and appended to the chain as a new state.

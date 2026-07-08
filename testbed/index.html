@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MechFlow Testbed</title>
+  <style>
+    body { font-family: monospace; padding: 2rem; }
+    hp-bar, status-badge { display: block; margin: 1rem 0; }
+    .controls { margin: 2rem 0; }
+    button { padding: 0.5rem 1rem; margin-right: 0.5rem; }
+    #trace { white-space: pre; background: #f5f5f5; padding: 1rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>MechFlow Testbed</h1>
+  <h2>HP Bar</h2>
+  <hp-bar></hp-bar>
+  <hr>
+  <status-badge></status-badge>
+  <div class="controls">
+    <button id="btn-damage-5">Damage 5</button>
+    <button id="btn-damage-15">Damage 15</button>
+    <button id="btn-heal-3">Heal 3</button>
+    <button id="btn-heal-6">Heal 6</button>
+    <button id="btn-temp-7">Temp HP +7</button>
+  </div>
+  <h3>Chain Trace</h3>
+  <div id="trace">(no events yet)</div>
+
+  <template id="tpl-hp-bar">
+    <div>
+      <div class="hp-fill" mf-bind:style="width:{0}% | hpPercent" style="height: 20px; background: #4caf50; transition: width 0.2s;"></div>
+      <div>
+        <span mf-text="hp"></span> / <span mf-text="hpMax"></span>
+        <span mf-text="tempHp" class="temp-hp"></span>
+      </div>
+      <div mf-toggle="bloodied">BLOODIED</div>
+    </div>
+  </template>
+
+  <template id="tpl-status-badge">
+    <div>
+      Status: <span mf-text="status"></span>
+    </div>
+  </template>
+
+  <script src="./main.js" type="module"></script>
+</body>
+</html>

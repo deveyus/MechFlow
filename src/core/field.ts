@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 MechFlow contributors
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 import type { Field, FieldOptions } from "./types.ts";
 
 export function field<T, N extends string>(

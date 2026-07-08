@@ -104,15 +104,7 @@ ctx.chain.find('heal') // ChainLink<S> | undefined
 
 ## Ordering Reference Safety
 
-Subscriber IDs used in `before`/`after` are validated against a union type derived from all registered subscribers:
-
-```ts
-subscribe(damage, handler)
-  .id('apply-damage')
-  .after('nonexistent-id')  // Compile error if 'nonexistent-id' not in subscriber IDs
-```
-
-This prevents ordering references to subscribers that don't exist.
+Subscriber IDs used in `before`/`after` are validated at runtime — unknown IDs emit a warning via `console.warn` and the edge is ignored. There is no compile-time validation, since subscriber IDs are dynamic strings determined at registration time.
 
 ## Type Relationships
 

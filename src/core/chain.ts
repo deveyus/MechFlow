@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 MechFlow contributors
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 import type { Chain, ChainLink } from "./types.ts";
 import type { SubscriberError } from "./types.ts";
 

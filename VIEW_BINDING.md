@@ -82,6 +82,5 @@ The scope is passed through to the subscription layer, allowing the same compone
 ## Constraints
 
 - All binding resolution happens at runtime — no build step
-- Transform functions are registered globally or per-component
 - Unsubscription is automatic in `disconnectedCallback`
 - Multiple elements can bind to the same field; all update on change

@@ -1,7 +1,16 @@
-import { Result } from "ts-results-es";
+// SPDX-FileCopyrightText: 2026 MechFlow contributors
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
-export type { Result } from "ts-results-es";
-export { Ok, Err } from "ts-results-es";
+export type OkResult<T> = { ok: true; value: T };
+export type ErrResult<E> = { ok: false; error: E };
+export type Result<T, E> = OkResult<T> | ErrResult<E>;
+
+export function Ok<T>(value: T): OkResult<T> {
+  return { ok: true as const, value };
+}
+export function Err<E>(error: E): ErrResult<E> {
+  return { ok: false as const, error };
+}
 
 export type SubscriberError = {
   readonly message: string;
@@ -63,3 +72,9 @@ export type SubscriberRegistration<S> = {
   after: string[];
   priority?: PriorityHint;
 };
+
+export type FieldChangeCallback = (
+  newValue: unknown,
+  oldValue: unknown,
+  fieldName: string,
+) => void;

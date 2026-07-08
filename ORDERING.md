@@ -100,16 +100,16 @@ For subscribers with no mutual edges (disconnected subgraphs), the order is dete
 
 ## Visualizing the DAG
 
-The system provides a `system.graph()` method that returns the adjacency list for inspection and debugging:
+The system provides a `system.graph()` method that returns the adjacency map for inspection and debugging. `after` targets are prefixed with `←`:
 
 ```ts
 const graph = system.graph()
-// {
-//   'damage-calc':  ['apply-damage'],
-//   'apply-damage': ['heal'],
-//   'rage-damage':  ['enrage', 'renew'],
-//   'enrage':       [],
-//   'renew':        [],
+// Map(5) {
+//   'damage-calc'  => ['apply-damage'],
+//   'apply-damage' => ['←damage-calc', 'heal'],
+//   'rage-damage'  => ['enrage', 'renew'],
+//   'enrage'       => [],
+//   'renew'        => [],
 // }
 ```
 

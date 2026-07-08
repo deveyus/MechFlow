@@ -1,11 +1,10 @@
 {
   "name": "mechflow",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "exports": "./src/mod.ts",
-  "imports": {
-    "ts-results-es": "npm:ts-results-es"
-  },
   "tasks": {
-    "test": "deno test src/"
+    "test": "deno test src/",
+    "build": "deno run -A npm:esbuild src/mod.ts --bundle --format=esm --outfile=dist/mechflow.js",
+    "build-testbed": "deno run -A npm:esbuild testbed/main.ts --bundle --format=esm --outfile=testbed/main.js"
   }
 }
