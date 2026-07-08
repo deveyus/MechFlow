@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 MechFlow contributors
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 /// <reference lib="dom" />
 
 import { bindComponent } from "./bindings.ts";
@@ -8,9 +11,6 @@ export function flow(name: string, template: HTMLTemplateElement): void {
   const templateContent = template.content;
 
   class MechComponent extends HTMLElement {
-    #boundElements: Map<string, Set<{ el: Element; attr: string; transform?: string }>> = new Map();
-    #disconnectFns: (() => void)[] = [];
-
     constructor() {
       super();
       this.attachShadow({ mode: "open" });
@@ -22,9 +22,11 @@ export function flow(name: string, template: HTMLTemplateElement): void {
     }
 
     disconnectedCallback() {
-      for (const fn of this.#disconnectFns) fn();
-      this.#disconnectFns = [];
-      this.#boundElements.clear();
+      const fns = (this as any).__mf_unbind as (() => void)[] | undefined;
+      if (fns) {
+        for (const fn of fns) fn();
+        delete (this as any).__mf_unbind;
+      }
     }
   }
 

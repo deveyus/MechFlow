@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 MechFlow contributors
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 import type { SubscriberRegistration, PriorityHint } from "./types.ts";
 
 export type Graph = Map<string, string[]>;
@@ -24,12 +27,16 @@ export function resolveOrdering(
       if (vertices.has(target)) {
         adjacency.get(sub.id)!.push(target);
         inDegree.set(target, (inDegree.get(target) ?? 0) + 1);
+      } else {
+        console.warn(`ordering: subscriber "${sub.id}" references unknown id "${target}" in before()`);
       }
     }
     for (const target of sub.after) {
       if (vertices.has(target)) {
         adjacency.get(target)!.push(sub.id);
         inDegree.set(sub.id, (inDegree.get(sub.id) ?? 0) + 1);
+      } else {
+        console.warn(`ordering: subscriber "${sub.id}" references unknown id "${target}" in after()`);
       }
     }
   }

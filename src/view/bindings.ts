@@ -1,13 +1,15 @@
+// SPDX-FileCopyrightText: 2026 MechFlow contributors
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 /// <reference lib="dom" />
 
-const ATTR_PATTERN = /^mf-/;
+import { getSystem } from "../core/system.ts";
 
-type BindingType = "text" | "bind" | "toggle" | "on" | "scope";
-
-const BINDING_ATTRS: Record<string, BindingType> = {
-  "mf-text": "text",
-  "mf-toggle": "toggle",
-};
+type ParsedBinding =
+  | { type: "text"; field: string }
+  | { type: "bind"; attr: string; fields: string[]; template: string }
+  | { type: "toggle"; field: string }
+  | { type: "on"; event: string; targetEvent: string; args: string[] };
 
 function parseBindAttr(name: string): { type: "bind"; attr: string } | null {
   const match = name.match(/^mf-bind:(.+)$/);
@@ -21,28 +23,25 @@ function parseOnAttr(name: string): { type: "on"; event: string } | null {
   return { type: "on", event: match[1] };
 }
 
-type ParsedBinding =
-  | { type: "text"; field: string }
-  | { type: "bind"; attr: string; fields: string[]; template: string }
-  | { type: "toggle"; field: string; className: string }
-  | { type: "on"; event: string; targetEvent: string; args: string[] }
-  | { type: "scope"; value: string };
-
 function parseBinding(el: Element): ParsedBinding | null {
   for (const attr of el.getAttributeNames()) {
     if (attr === "mf-text") {
       return { type: "text", field: el.getAttribute(attr)! };
     }
     if (attr === "mf-toggle") {
-      return { type: "toggle", field: el.getAttribute(attr)!, className: el.getAttribute(attr)! };
+      return { type: "toggle", field: el.getAttribute(attr)! };
     }
     const bind = parseBindAttr(attr);
     if (bind) {
       const raw = el.getAttribute(attr)!;
       const pipeIdx = raw.indexOf("|");
       if (pipeIdx === -1) {
-        // Single field, no template — field name IS the value
-        return { type: "bind", attr: bind.attr, fields: [raw.trim()], template: "{0}" };
+        return {
+          type: "bind",
+          attr: bind.attr,
+          fields: [raw.trim()],
+          template: "{0}",
+        };
       }
       const template = raw.slice(0, pipeIdx).trim();
       const fields = raw.slice(pipeIdx + 1).split(",").map((s) => s.trim());
@@ -53,7 +52,12 @@ function parseBinding(el: Element): ParsedBinding | null {
       const raw = el.getAttribute(attr)!;
       const colonIdx = raw.indexOf(":");
       if (colonIdx === -1) {
-        return { type: "on", event: on.event, targetEvent: raw.trim(), args: [] };
+        return {
+          type: "on",
+          event: on.event,
+          targetEvent: raw.trim(),
+          args: [],
+        };
       }
       return {
         type: "on",
@@ -62,90 +66,104 @@ function parseBinding(el: Element): ParsedBinding | null {
         args: raw.slice(colonIdx + 1).split(",").map((s) => s.trim()),
       };
     }
-    if (attr === "mf-scope") {
-      return { type: "scope", value: el.getAttribute(attr)! };
-    }
   }
   return null;
 }
 
-export function walkBindings(root: DocumentFragment | ShadowRoot): void {
-  const elements = root.querySelectorAll("*");
-  for (const el of elements) {
-    const binding = parseBinding(el);
-    if (!binding) continue;
-  }
-}
-
 export function bindComponent(host: HTMLElement, root: ShadowRoot): void {
+  const system = getSystem();
+  if (!system) return;
+
+  const unbindFns: (() => void)[] = [];
   const elements = root.querySelectorAll("*");
+
   for (const el of elements) {
     const binding = parseBinding(el);
     if (!binding) continue;
 
     switch (binding.type) {
-      case "text":
-        subscribeElement(host, binding.field, (val) => {
+      case "text": {
+        // Set initial value
+        el.textContent = String(system.readField(binding.field) ?? "");
+        // Subscribe to changes
+        const unsub = system.onFieldChange(binding.field, (val) => {
           el.textContent = String(val ?? "");
         });
+        unbindFns.push(unsub);
         break;
+      }
 
       case "bind": {
         const vals: unknown[] = new Array(binding.fields.length).fill(undefined);
+        // Set initial values
         binding.fields.forEach((fieldName, i) => {
-          subscribeElement(host, fieldName, (val) => {
+          vals[i] = system.readField(fieldName);
+        });
+        applyBindTemplate(el, binding, vals);
+        // Subscribe to changes
+        binding.fields.forEach((fieldName, i) => {
+          const unsub = system.onFieldChange(fieldName, (val) => {
             vals[i] = val;
-            const rendered = binding.template.replace(
-              /\{(\d+)\}/g,
-              (_, idx) => String(vals[Number(idx)] ?? ""),
-            );
-            if (binding.attr === "style") {
-              (el as HTMLElement).style.cssText = rendered;
-            } else {
-              el.setAttribute(binding.attr, rendered);
-            }
+            applyBindTemplate(el, binding, vals);
           });
+          unbindFns.push(unsub);
         });
         break;
       }
 
-      case "toggle":
-        subscribeElement(host, binding.field, (val) => {
-          if (val) {
-            el.classList.add(binding.className);
-          } else {
-            el.classList.remove(binding.className);
-          }
+      case "toggle": {
+        const htEl = el as HTMLElement;
+        htEl.hidden = !Boolean(system.readField(binding.field));
+        const unsub = system.onFieldChange(binding.field, (val) => {
+          htEl.hidden = !Boolean(val);
         });
+        unbindFns.push(unsub);
         break;
+      }
 
-      case "on":
-        el.addEventListener(binding.event, () => {
-          import("../core/system.ts").then(({ getSystem }) => {
-            const sys = getSystem();
-            if (sys) {
-              sys.fire({ name: binding.targetEvent } as any, binding.args as any);
-            }
-          });
-        });
+      case "on": {
+        const evtObj = system.event(binding.targetEvent);
+        if (!evtObj) {
+          console.warn(`mf-on: unknown event "${binding.targetEvent}" on element`, el);
+          break;
+        }
+        const payload = binding.args.length === 0
+          ? undefined
+          : binding.args.length === 1
+          ? tryParseNumber(binding.args[0])
+          : binding.args.map((a) => tryParseNumber(a));
+        const handler = () => {
+          system.fire(evtObj, payload as any);
+        };
+        el.addEventListener(binding.event, handler);
+        unbindFns.push(() => el.removeEventListener(binding.event, handler));
         break;
+      }
     }
   }
+
+  // Store unbind functions for cleanup
+  (host as any).__mf_unbind = unbindFns;
 }
 
-function subscribeElement(
-  host: HTMLElement,
-  fieldName: string,
-  cb: (val: unknown) => void,
-): void {
-  import("../core/system.ts").then(({ getSystem }) => {
-    const sys = getSystem();
-    if (!sys) return;
+function tryParseNumber(s: string): string | number {
+  const n = Number(s);
+  if (!Number.isNaN(n) && s.trim() !== "") return n;
+  return s;
+}
 
-    // Set initial value
-    const f = sys.field(fieldName);
-    // Ideally we'd subscribe to changes here
-    // For now, fire field-get as simple access
-    cb(f?.options.default);
-  });
+function applyBindTemplate(
+  el: Element,
+  binding: ParsedBinding & { type: "bind" },
+  vals: unknown[],
+): void {
+  const rendered = binding.template.replace(
+    /\{(\d+)\}/g,
+    (_, idx) => String(vals[Number(idx)] ?? ""),
+  );
+  if (binding.attr === "style") {
+    (el as HTMLElement).style.cssText = rendered;
+  } else {
+    el.setAttribute(binding.attr, rendered);
+  }
 }
