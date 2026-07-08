@@ -1,0 +1,30 @@
+{
+  "name": "@deveyus/mechflow",
+  "version": "0.3.2",
+  "description": "Deterministic state management with explicit ordering, fail-continue semantics, and a built-in audit trail.",
+  "type": "module",
+  "main": "./dist/mechflow.js",
+  "exports": {
+    ".": {
+      "import": "./dist/mechflow.js"
+    }
+  },
+  "files": [
+    "dist/mechflow.js",
+    "LICENSE",
+    "README.md"
+  ],
+  "keywords": ["state", "reactive", "event-driven", "deterministic", "state-management"],
+  "license": "EUPL-1.2",
+  "homepage": "https://github.com/deveyus/MechFlow",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deveyus/MechFlow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/deveyus/MechFlow/issues"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}
