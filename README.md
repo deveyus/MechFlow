@@ -282,6 +282,25 @@ deno task build        # → dist/mechflow.js (self-contained ESM bundle)
 deno task build-testbed # → testbed/main.js
 ```
 
+## Supply Chain Security
+
+You're considering letting a state management library into your application. You should know exactly what you're getting — and that it hasn't been tampered with between the author's keyboard and your `node_modules`.
+
+Every commit and release tag in this repository is signed with a **hardware security key**. The key is registered on GitHub — every commit shows as **Verified**. The `@deveyus/mechflow` npm package is built and published from those signed commits via CI.
+
+**What this means for you:**
+- **Chain of custody.** Every change has a cryptographic signature proving who authored it and when. No anonymous commits. No squashed history hiding provenance.
+- **Tags are signed, not just commits.** Release `v0.3.2` is backed by the same key. You can verify that the published artifact matches the tagged source.
+- **Verify locally:**
+
+```sh
+git log --show-signature
+```
+
+The signing key exists on a physical device in the maintainer's possession — not a file on disk, not a CI token. Physical presence is required to sign.
+
+This project practices what it preaches about correctness. The same discipline applied to state ordering and error isolation is applied to the integrity of the code itself.
+
 ## Tests
 
 ```sh
