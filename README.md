@@ -13,21 +13,23 @@ State is a flat map of named fields. The only way to change it is by firing an e
 ```ts
 import { field, event, createSystem, Ok } from 'mechflow'
 
-// A field is a named state slot with a default value
 const balance = field('balance', { default: 0 })
-
-// An event carries a typed payload
 const deposited = event<{ amount: number }>('deposited')
-
-// A system ties fields and events together
 const sys = createSystem({ fields: [balance], events: [deposited] })
 
-// A subscriber returns Ok(delta) — the fields to merge into state
+// Add the deposit to the balance — inline lambda for simple one-liner
 sys.subscribe(deposited, ctx =>
   Ok({ balance: ctx.chain.current.balance + ctx.payload.amount })
 )
 
-// Fire the event — the subscriber runs, state updates
+// Same intent, written as a named function: read the current balance from
+// the chain, compute the sum, return the new balance as a delta
+function addToBalance(ctx) {
+  const newBalance = ctx.chain.current.balance + ctx.payload.amount
+  return Ok({ balance: newBalance })
+}
+sys.subscribe(deposited, addToBalance)
+
 const r = sys.fire(deposited, { amount: 50 })
 console.log(r.state) // { balance: 50 }
 ```
@@ -46,18 +48,21 @@ import { field, event, createSystem, Ok } from 'mechflow'
 const balance = field('balance', { default: 100 })
 const flag = field('flag', { default: '' as string })
 const withdrew = event<{ amount: number }>('withdrew')
-
 const sys = createSystem({ fields: [balance, flag], events: [withdrew] })
 
-// First: deduct the amount
+// Deduct the withdrawal amount from the balance — inline lambda returns
+// the new balance as a delta
 sys.subscribe(withdrew, ctx =>
   Ok({ balance: ctx.chain.current.balance - ctx.payload.amount })
 ).id('deduct')
 
-// Second: check the result — runs after 'deduct' because we declared it
-sys.subscribe(withdrew, ctx =>
-  Ok({ flag: ctx.chain.current.balance < 0 ? 'overdrawn' : 'clear' })
-).id('check').after('deduct')
+// Determine account status after the deduction runs: read the updated
+// balance from the chain, check if it went negative, then set the flag
+function checkOverdrawn(ctx) {
+  const status = ctx.chain.current.balance < 0 ? 'overdrawn' : 'clear'
+  return Ok({ flag: status })
+}
+sys.subscribe(withdrew, checkOverdrawn).id('check').after('deduct')
 
 const r = sys.fire(withdrew, { amount: 150 })
 console.log(r.state) // { balance: -50, flag: 'overdrawn' }
@@ -79,21 +84,24 @@ import { field, event, createSystem, Ok, Err } from 'mechflow'
 const balance = field('balance', { default: 100 })
 const log = field('log', { default: '' as string })
 const withdrew = event<{ amount: number }>('withdrew')
-
 const sys = createSystem({ fields: [balance, log], events: [withdrew] })
 
-// Validate and deduct — fails if balance is insufficient
+// Validate the withdrawal: return Err if the amount exceeds the current
+// balance, otherwise return Ok with the new balance
 sys.subscribe(withdrew, ctx =>
   ctx.payload.amount > ctx.chain.current.balance
     ? Err(new Error('insufficient funds'))
     : Ok({ balance: ctx.chain.current.balance - ctx.payload.amount })
 ).id('deduct')
 
-// Audit — runs regardless of whether 'deduct' succeeded or failed
-sys.subscribe(withdrew, ctx => {
+// Record the audit trail: look up deduct's result in the chain, check
+// whether it errored, then set the log entry accordingly
+function audit(ctx) {
   const prev = ctx.chain.find('deduct')
-  return Ok({ log: prev?.error ? `failed: ${prev.error.message}` : 'approved' })
-}).id('audit').after('deduct')
+  const entry = prev?.error ? `failed: ${prev.error.message}` : 'approved'
+  return Ok({ log: entry })
+}
+sys.subscribe(withdrew, audit).id('audit').after('deduct')
 
 const ok = sys.fire(withdrew, { amount: 50 })
 console.log(ok.state)         // { balance: 50, log: 'approved' }
@@ -156,9 +164,10 @@ const damaged = event<DamageEvent>('damaged')
 
 **Subscribers** are functions that receive `{ chain, payload, tick, event }` and return `Result<Delta, Error>`:
 ```ts
-sys.subscribe(damaged, ctx =>
-  Ok({ hp: ctx.chain.current.hp - ctx.payload.amount })
-).id('apply-damage')
+function applyDamage(ctx) {
+  return Ok({ hp: ctx.chain.current.hp - ctx.payload.amount })
+}
+sys.subscribe(damaged, applyDamage).id('apply-damage')
 ```
 
 **The Chain** is the ordered list of every subscriber's result within a tick:
