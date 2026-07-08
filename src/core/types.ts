@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 MechFlow contributors
-// SPDX-License-Identifier: LGPL-3.0-or-later
+// SPDX-License-Identifier: EUPL-1.2
 
 export type OkResult<T> = { ok: true; value: T };
 export type ErrResult<E> = { ok: false; error: E };
