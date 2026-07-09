@@ -1,6 +1,6 @@
 {
   "name": "mechflow",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "description": "Deterministic state management with explicit ordering, fail-continue semantics, and a built-in audit trail.",
   "type": "module",
   "main": "./dist/mechflow.js",
@@ -12,7 +12,8 @@
   "files": [
     "dist/mechflow.js",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "SECURITY.md"
   ],
   "keywords": ["state", "reactive", "event-driven", "deterministic", "state-management"],
   "license": "EUPL-1.2",
