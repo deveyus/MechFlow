@@ -1,6 +1,6 @@
 {
   "name": "mechflow",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Deterministic state management with explicit ordering, fail-continue semantics, and a built-in audit trail.",
   "type": "module",
   "main": "./dist/mechflow.js",
