@@ -247,16 +247,16 @@ All attributes are resolved at runtime in `connectedCallback`. No build step req
 
 ## Performance
 
-Tick throughput on commodity hardware (single thread, no JIT warmup):
+Tick throughput on commodity hardware (single thread, no JIT warmup, Deno 2.7):
 
-| Subscribers | Time per tick | Ticks within 16ms (60fps) |
-|------------|---------------|--------------------------|
-| 10 | ~0.01ms | ~1,600 |
-| 100 | ~0.06ms | ~260 |
-| 500 | ~0.28ms | ~57 |
-| 2000 | ~1.12ms | ~14 |
+| Subscribers | Boot (one-time) | Tick (post-boot) | Ticks within 16ms (60fps) |
+|------------|----------------|-------------------|--------------------------|
+| 10 | ~0.21ms | ~0.064ms | ~15,600 |
+| 100 | ~1.78ms | ~0.12ms | ~8,300 |
+| 500 | ~17.1ms | ~0.30ms | ~3,300 |
+| 2000 | ~62.9ms | ~0.50ms | ~2,000 |
 
-The hot path is a flat array dispatch with a reusable context object — no closures, no Map lookups, no class instantiation in the inner loop.
+Boot runs once on the first `fire()` — it resolves subscriber ordering and builds the handler dispatch array. Subsequent ticks dispatch a flat array with a reusable context object, no Map lookups, no closures, and no class instantiation in the inner loop.
 
 **Bundle:** 17KB self-contained ESM (zero runtime dependencies).
 

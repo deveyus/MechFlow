@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 MechFlow contributors
 // SPDX-License-Identifier: EUPL-1.2
 
+let tmpCounter = 0;
+
 import type {
   Field,
   Event,
@@ -61,19 +63,6 @@ export function createSystem<F extends Field<any, string>[]>(
   let tickCounter = 0;
   let systemReady = false;
   const fieldChangeListeners = new Map<string, Set<FieldChangeCallback>>();
-
-  function notifyFieldChanges(oldState: S, newState: S): void {
-    for (const key of fieldChangeListeners.keys()) {
-      const oldVal = (oldState as Record<string, unknown>)[key];
-      const newVal = (newState as Record<string, unknown>)[key];
-      if (oldVal !== newVal) {
-        const cbs = fieldChangeListeners.get(key);
-        if (cbs) {
-          for (const cb of cbs) cb(newVal, oldVal, key);
-        }
-      }
-    }
-  }
 
   for (const f of config.fields) {
     fieldMap.set(f.name, f);
@@ -174,17 +163,28 @@ export function createSystem<F extends Field<any, string>[]>(
         event: evt.name,
       } as const;
 
+      const preTickState = { ...state } as Record<string, unknown>;
+
       for (const { id, handler } of handlers) {
         const result = safeExecute(handler, ctx);
 
         if (result.ok) {
-          const oldState = state;
           const delta = result.delta;
           state = { ...state, ...delta };
           chain.append(state as S, id);
-          notifyFieldChanges(oldState, state);
         } else {
           chain.append(chain.unsafeCurrent as S, id, result.error);
+        }
+      }
+
+      for (const key of fieldChangeListeners.keys()) {
+        const oldVal = preTickState[key];
+        const newVal = (state as Record<string, unknown>)[key];
+        if (oldVal !== newVal) {
+          const cbs = fieldChangeListeners.get(key);
+          if (cbs) {
+            for (const cb of cbs) cb(newVal, oldVal, key);
+          }
         }
       }
 
@@ -229,7 +229,7 @@ export function createSystem<F extends Field<any, string>[]>(
     if (!subs || !subMap) return builder;
 
     // Register immediately with a temp ID
-    const tempId = `_tmp_${Math.random().toString(36).slice(2, 8)}`;
+    const tempId = `_tmp_${++tmpCounter}`;
     let currentReg: SubscriberRegistration<S> = {
       id: tempId, handler: handler as SubscriberHandler<any, S>,
       before: [], after: [],
@@ -240,16 +240,50 @@ export function createSystem<F extends Field<any, string>[]>(
 
     function reRegister(): void {
       const reg = builder.build();
-      currentReg = reg;
-      const oldIdx = regList.findIndex((s) =>
-        s.id === tempId || s.id === reg.id
-      );
-      if (oldIdx >= 0) {
-        regList[oldIdx] = reg;
-        subMap!.set(reg.id, reg);
-        if (reg.id !== tempId) subMap!.delete(tempId);
+
+      if (reg.id !== tempId) {
+        for (const existing of regList) {
+          if (
+            existing.id === reg.id &&
+            existing.id !== tempId &&
+            existing.id !== currentReg.id
+          ) {
+            throw new Error(
+              `Duplicate subscriber id "${reg.id}" for event "${evt.name}"`,
+            );
+          }
+        }
       }
-      // Re-resolve ordering
+
+      const sameOrdering =
+        arraysEqual(reg.before, currentReg.before) &&
+        arraysEqual(reg.after, currentReg.after) &&
+        reg.priority === currentReg.priority;
+
+      currentReg = reg;
+      let targetIdx = regList.findIndex((s) => s.id === tempId);
+      if (targetIdx < 0) {
+        targetIdx = regList.findIndex((s) => s.id === reg.id);
+      }
+      if (targetIdx >= 0) {
+        regList[targetIdx] = reg;
+      }
+      subMap!.set(reg.id, reg);
+      if (reg.id !== tempId) subMap!.delete(tempId);
+
+      if (sameOrdering) {
+        if (systemReady && resolvedOrders.has(evt.name)) {
+          const order = resolvedOrders.get(evt.name)!;
+          const entries: HandlerEntry[] = [];
+          for (const id of order) {
+            const r = subMap!.get(id);
+            if (r) entries.push({ id, handler: r.handler });
+          }
+          resolvedHandlers.set(evt.name, entries);
+        }
+        return;
+      }
+
       const result = resolveOrdering(regList);
       if (result.cycle && result.cycle.length > 0) {
         throw new Error(
@@ -265,6 +299,14 @@ export function createSystem<F extends Field<any, string>[]>(
         }
         resolvedHandlers.set(evt.name, entries);
       }
+    }
+
+    function arraysEqual(a: string[], b: string[]): boolean {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+      }
+      return true;
     }
 
     const origId = builder.id.bind(builder);

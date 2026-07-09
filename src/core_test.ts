@@ -140,13 +140,17 @@ Deno.test("cycle detection throws at registration time", () => {
   system.subscribe(damageTaken, () => Ok({})).id("a").before("b");
   system.subscribe(damageTaken, () => Ok({})).id("b").before("c");
 
+  let caught: string | undefined;
   try {
     system.subscribe(damageTaken, () => Ok({})).id("c").before("a");
-    throw new Error("Should have thrown");
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    assertEquals(msg.includes("Cycle"), true);
+    caught = e instanceof Error ? e.message : String(e);
   }
+  assertEquals(
+    caught?.includes("Cycle") ?? false,
+    true,
+    caught ? `expected "Cycle" in "${caught}"` : "expected throw",
+  );
 });
 
 Deno.test("priority early places subscriber early within layer", () => {
@@ -182,6 +186,52 @@ Deno.test("priority early places subscriber early within layer", () => {
   assertEquals(order[0], "b");
   assertEquals(order[1], "c");
   assertEquals(order[2], "a");
+});
+
+Deno.test("duplicate subscriber id throws", () => {
+  const hp = field("hp", { default: 20 });
+  const damageTaken = event<DamageEvent>("damage:taken");
+
+  const system = createSystem({
+    fields: [hp],
+    events: [damageTaken],
+  });
+
+  useSystem(system);
+
+  system.subscribe(damageTaken, () => Ok({ hp: 15 })).id("heal");
+
+  try {
+    system.subscribe(damageTaken, () => Ok({ hp: 25 })).id("heal");
+    throw new Error("Should have thrown");
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    assertEquals(msg.includes("heal"), true);
+  }
+});
+
+Deno.test("deferred builder chaining works", () => {
+  const hp = field("hp", { default: 20 });
+  const damageTaken = event<DamageEvent>("damage:taken");
+
+  const system = createSystem({
+    fields: [hp],
+    events: [damageTaken],
+  });
+
+  useSystem(system);
+
+  const builder = system.subscribe(damageTaken, (ctx) => {
+    return Ok({ hp: ctx.chain.current.hp - ctx.payload.amount });
+  });
+  builder.id("apply-damage").after("drain");
+
+  system.subscribe(damageTaken, (ctx) => {
+    return Ok({ hp: ctx.chain.current.hp - ctx.payload.amount });
+  }).id("drain");
+
+  const result = system.fire(damageTaken, { amount: 5 });
+  assertEquals(result.state.hp, 10); // drain: 20→15, apply-damage: 15→10
 });
 
 Deno.test("chain convenience accessors work", () => {

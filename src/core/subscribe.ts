@@ -3,6 +3,8 @@
 
 import type { Event, SubscriberHandler, SubscriberRegistration, PriorityHint } from "./types.ts";
 
+let anonCounter = 0;
+
 export class SubscriptionBuilder<S> {
   private _id?: string;
   private _before: string[] = [];
@@ -37,12 +39,12 @@ export class SubscriptionBuilder<S> {
   }
 
   build(): SubscriberRegistration<S> {
-    const id = this._id ?? `anon_${Math.random().toString(36).slice(2, 8)}`;
+    const id = this._id ?? `anon_${++anonCounter}`;
     return {
       id,
       handler: this._handler,
-      before: this._before,
-      after: this._after,
+      before: [...this._before],
+      after: [...this._after],
       priority: this._priority,
     };
   }
