@@ -260,28 +260,34 @@ export function createSystem<F extends Field<any, string>[]>(
         arraysEqual(reg.after, currentReg.after) &&
         reg.priority === currentReg.priority;
 
+      const prevId = currentReg.id;
       currentReg = reg;
       let targetIdx = regList.findIndex((s) => s.id === tempId);
       if (targetIdx < 0) {
-        targetIdx = regList.findIndex((s) => s.id === reg.id);
+        targetIdx = regList.findIndex((s) => s.id === prevId);
       }
       if (targetIdx >= 0) {
         regList[targetIdx] = reg;
       }
       subMap!.set(reg.id, reg);
       if (reg.id !== tempId) subMap!.delete(tempId);
+      if (prevId !== reg.id) subMap!.delete(prevId);
 
       if (sameOrdering) {
         if (systemReady && resolvedOrders.has(evt.name)) {
           const order = resolvedOrders.get(evt.name)!;
-          const entries: HandlerEntry[] = [];
-          for (const id of order) {
-            const r = subMap!.get(id);
-            if (r) entries.push({ id, handler: r.handler });
+          if (order.includes(reg.id)) {
+            const entries: HandlerEntry[] = [];
+            for (const id of order) {
+              const r = subMap!.get(id);
+              if (r) entries.push({ id, handler: r.handler });
+            }
+            resolvedHandlers.set(evt.name, entries);
+            return;
           }
-          resolvedHandlers.set(evt.name, entries);
+        } else {
+          return;
         }
-        return;
       }
 
       const result = resolveOrdering(regList);

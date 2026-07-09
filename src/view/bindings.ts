@@ -23,7 +23,7 @@ function parseOnAttr(name: string): { type: "on"; event: string } | null {
   return { type: "on", event: match[1] };
 }
 
-function parseBinding(el: Element): ParsedBinding | null {
+export function parseBinding(el: Element): ParsedBinding | null {
   for (const attr of el.getAttributeNames()) {
     if (attr === "mf-text") {
       return { type: "text", field: el.getAttribute(attr)! };
@@ -146,7 +146,7 @@ export function bindComponent(host: HTMLElement, root: ShadowRoot): void {
   (host as any).__mf_unbind = unbindFns;
 }
 
-function tryParseNumber(s: string): string | number {
+export function tryParseNumber(s: string): string | number {
   const n = Number(s);
   if (!Number.isNaN(n) && s.trim() !== "") return n;
   return s;
