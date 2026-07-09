@@ -23,9 +23,10 @@ jobs:
       # Publish to npm via OIDC Trusted Publisher (npm 11.x+ supports this natively)
       - run: npm publish --provenance
 
-      # Publish to GitHub Packages
+      # Publish to GitHub Packages (needs scoped name @deveyus/mechflow)
       - name: Publish to GitHub Packages
         run: |
-          echo "@deveyus:registry=https://npm.pkg.github.com" > .npmrc.gh
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PAT }}" >> .npmrc.gh
+          npm pkg set name=@deveyus/mechflow
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PAT }}" > .npmrc.gh
           npm publish --userconfig=.npmrc.gh --registry=https://npm.pkg.github.com
+          npm pkg set name=mechflow
