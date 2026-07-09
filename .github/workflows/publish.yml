@@ -25,6 +25,7 @@ jobs:
 
       # Publish to GitHub Packages (needs scoped name @deveyus/mechflow)
       - name: Publish to GitHub Packages
+        continue-on-error: true
         run: |
           npm pkg set name=@deveyus/mechflow
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PAT }}" > .npmrc.gh
