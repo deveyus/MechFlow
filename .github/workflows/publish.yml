@@ -18,13 +18,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
 
-      # Upgrade npm to 11.5.1+ for OIDC trusted publishing support
-      - run: npm install -g npm@latest
-
-      # Publish to npm via OIDC Trusted Publisher — no NODE_AUTH_TOKEN, registry-url identifies the registry
-      - run: npm publish --provenance
+      # Publish to npm via OIDC Trusted Publisher using npm-publish action
+      - uses: JS-DevTools/npm-publish@v3
+        with:
+          provenance: true
+          access: public
 
       # Publish to GitHub Packages
       - name: Publish to GitHub Packages
