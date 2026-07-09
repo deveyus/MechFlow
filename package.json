@@ -1,5 +1,5 @@
 {
-  "name": "@deveyus/mechflow",
+  "name": "mechflow",
   "version": "0.3.2",
   "description": "Deterministic state management with explicit ordering, fail-continue semantics, and a built-in audit trail.",
   "type": "module",
@@ -25,6 +25,7 @@
     "url": "https://github.com/deveyus/MechFlow/issues"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   }
 }

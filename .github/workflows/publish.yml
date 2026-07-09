@@ -1,4 +1,4 @@
-name: Publish to GitHub Packages
+name: Publish
 
 on:
   push:
@@ -17,9 +17,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://npm.pkg.github.com
-          scope: '@deveyus'
 
+      # Publish to public npm registry
       - run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+
+      # Publish to GitHub Packages
+      - name: Publish to GitHub Packages
+        run: |
+          echo "@deveyus:registry=https://npm.pkg.github.com" > .npmrc.gh
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PAT }}" >> .npmrc.gh
+          npm publish --userconfig=.npmrc.gh --registry=https://npm.pkg.github.com

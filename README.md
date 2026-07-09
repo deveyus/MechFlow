@@ -262,18 +262,11 @@ The hot path is a flat array dispatch with a reusable context object — no clos
 
 ## Install
 
-MechFlow is published on GitHub Packages under the `@deveyus` scope.
-
 ```sh
-# npm — requires GitHub auth
-# Create a .npmrc with:
-#   @deveyus:registry=https://npm.pkg.github.com
-#   //npm.pkg.github.com/:_authToken=<your-gh-pat>
-npm install @deveyus/mechflow
-
-# Deno — from source (no auth needed)
-deno add jsr:@deveyus/mechflow
+npm install mechflow
 ```
+
+MechFlow is also available on [GitHub Packages](https://github.com/deveyus/MechFlow/packages) as `@deveyus/mechflow` for CI/CD workflows that authenticate via GitHub.
 
 ## Build
 
