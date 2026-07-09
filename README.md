@@ -305,12 +305,13 @@ deno run src/e2e_test.ts        # Chromium headless e2e
 
 | Doc | What it covers |
 |-----|---------------|
-| [ABSTRACT.md](ABSTRACT.md) | Core principles, tick model, architecture |
-| [API.md](API.md) | Full API reference |
-| [TICK_LIFECYCLE.md](TICK_LIFECYCLE.md) | Walkthrough of a single tick |
-| [ORDERING.md](ORDERING.md) | Partial ordering, topological sort, priority |
-| [VIEW_BINDING.md](VIEW_BINDING.md) | Declarative mf-* binding attributes |
-| [TYPE_SYSTEM.md](TYPE_SYSTEM.md) | TypeScript integration and type inference |
+| [docs/ABSTRACT.md](docs/ABSTRACT.md) | Core principles, tick model, architecture |
+| [docs/API.md](docs/API.md) | Full API reference |
+| [docs/TICK_LIFECYCLE.md](docs/TICK_LIFECYCLE.md) | Walkthrough of a single tick |
+| [docs/ORDERING.md](docs/ORDERING.md) | Partial ordering, topological sort, priority |
+| [docs/VIEW_BINDING.md](docs/VIEW_BINDING.md) | Declarative mf-* binding attributes |
+| [docs/TYPE_SYSTEM.md](docs/TYPE_SYSTEM.md) | TypeScript integration and type inference |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture Decision Records |
 
 ## License
 
