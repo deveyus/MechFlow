@@ -18,10 +18,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
 
-      # Publish to public npm registry (Trusted Publishing — no token needed)
-      - run: npm publish --provenance
+      # Publish to public npm registry (Trusted Publishing via OIDC — no registry-url needed)
+      - run: npm publish --provenance --access public
 
       # Publish to GitHub Packages
       - name: Publish to GitHub Packages
