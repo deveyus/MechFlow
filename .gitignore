@@ -1,4 +1,3 @@
-dist/*
-!dist/mechflow.js
+dist/
 result*
 node_modules/
