@@ -10,20 +10,18 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write  # needed for npm provenance
+      id-token: write  # needed for OIDC trusted publishing
       packages: write   # needed for GitHub Packages
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
+          registry-url: https://registry.npmjs.org
 
-      # Publish to npm via OIDC Trusted Publisher using npm-publish action
-      - uses: JS-DevTools/npm-publish@v3
-        with:
-          provenance: true
-          access: public
+      # Publish to npm via OIDC Trusted Publisher (npm 11.x+ supports this natively)
+      - run: npm publish --provenance
 
       # Publish to GitHub Packages
       - name: Publish to GitHub Packages
