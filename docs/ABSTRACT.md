@@ -31,7 +31,7 @@ Every subscriber receives `{ chain, tick }`. The chain is an ordered list of lin
 
 Each link is `{ state: State, error?: SubscriberError }`. A link without an error means the subscriber returned a successful delta. A link with an error means the subscriber failed — its state is identical to the prior link's state.
 
-Convenience accessors (`chain.first`, `chain.current`, `chain.unsafeCurrent`) are provided for readability — they are simple aliases over positional reads. The chain is append-only and observable, giving subscribers full visibility into the resolution sequence. Failed subscribers are visible in the chain as stutters — state unchanged, error attached.
+Convenience accessors (`chain.first`, `chain.current`, `chain.unsafeCurrent`) are provided for readability — they are simple aliases over positional reads. The chain is append-only, giving subscribers full visibility into the resolution sequence. Failed subscribers are visible in the chain as stutters — state unchanged, error attached.
 
 ### Error Handling
 

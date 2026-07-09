@@ -12,6 +12,7 @@ export { field } from "./core/field.ts";
 export { event } from "./core/event.ts";
 export { createSystem, useSystem, getSystem } from "./core/system.ts";
 export { flow } from "./view/flow.ts";
+export { setModelDebounce } from "./view/bindings.ts";
 export { Ok, Err } from "./core/types.ts";
 export type { Result, OkResult, ErrResult } from "./core/types.ts";
 

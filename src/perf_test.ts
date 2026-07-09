@@ -60,3 +60,42 @@ Deno.test("perf: 2000 subscribers", () => {
   const r = benchmarkSubscriberCount(2000);
   console.log(`  ${r.count} subs: ${r.tickMs}ms/tick (${r.opsPerSec} ops/sec) — boot: ${r.bootMs}ms`);
 });
+
+function benchmarkWriteField(count: number): { count: number; writeMs: number; opsPerSec: number } {
+  const f = field("val", { default: 0 });
+  const system = createSystem({ fields: [f], events: [] });
+
+  const cbs: (() => void)[] = [];
+  for (let i = 0; i < count; i++) {
+    cbs.push(system.onFieldChange("val", () => {}));
+  }
+
+  const start = performance.now();
+  for (let i = 0; i < 1000; i++) {
+    system.writeField("val", i);
+  }
+  const elapsed = performance.now() - start;
+
+  for (const unsub of cbs) unsub();
+
+  return {
+    count,
+    writeMs: parseFloat((elapsed / 1000).toFixed(6)),
+    opsPerSec: Math.round(1000 / (elapsed / 1000)),
+  };
+}
+
+Deno.test("perf: writeField — 0 listeners", () => {
+  const r = benchmarkWriteField(0);
+  console.log(`  ${r.count} listeners: ${r.writeMs}ms/write (${r.opsPerSec} writes/sec)`);
+});
+
+Deno.test("perf: writeField — 10 listeners", () => {
+  const r = benchmarkWriteField(10);
+  console.log(`  ${r.count} listeners: ${r.writeMs}ms/write (${r.opsPerSec} writes/sec)`);
+});
+
+Deno.test("perf: writeField — 100 listeners", () => {
+  const r = benchmarkWriteField(100);
+  console.log(`  ${r.count} listeners: ${r.writeMs}ms/write (${r.opsPerSec} writes/sec)`);
+});

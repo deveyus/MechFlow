@@ -36,6 +36,7 @@ export type System<S> = {
   field(name: string): Field<any> | undefined;
   event(name: string): Event<any> | undefined;
   readField(name: string): unknown;
+  writeField(name: string, value: unknown): void;
   subscribe<E>(
     evt: Event<E>,
     handler: SubscriberHandler<E, S>,
@@ -132,6 +133,15 @@ export function createSystem<F extends Field<any, string>[]>(
 
     readField(name: string): unknown {
       return (state as Record<string, unknown>)[name];
+    },
+
+    writeField(name: string, value: unknown): void {
+      const oldVal = (state as Record<string, unknown>)[name];
+      state = { ...state, [name]: value } as S;
+      const cbs = fieldChangeListeners.get(name);
+      if (cbs) {
+        for (const cb of cbs) cb(value, oldVal, name);
+      }
     },
 
     subscribe<E>(

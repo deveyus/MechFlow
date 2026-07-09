@@ -9,7 +9,14 @@ type ParsedBinding =
   | { type: "text"; field: string }
   | { type: "bind"; attr: string; fields: string[]; template: string }
   | { type: "toggle"; field: string }
-  | { type: "on"; event: string; targetEvent: string; args: string[] };
+  | { type: "on"; event: string; targetEvent: string; args: string[] }
+  | { type: "model"; field: string };
+
+let modelDebounceMs = 200;
+
+export function setModelDebounce(ms: number): void {
+  modelDebounceMs = ms;
+}
 
 function parseBindAttr(name: string): { type: "bind"; attr: string } | null {
   const match = name.match(/^mf-bind:(.+)$/);
@@ -30,6 +37,9 @@ export function parseBinding(el: Element): ParsedBinding | null {
     }
     if (attr === "mf-toggle") {
       return { type: "toggle", field: el.getAttribute(attr)! };
+    }
+    if (attr === "mf-model") {
+      return { type: "model", field: el.getAttribute(attr)! };
     }
     const bind = parseBindAttr(attr);
     if (bind) {
@@ -137,6 +147,42 @@ export function bindComponent(host: HTMLElement, root: ShadowRoot): void {
         };
         el.addEventListener(binding.event, handler);
         unbindFns.push(() => el.removeEventListener(binding.event, handler));
+        break;
+      }
+
+      case "model": {
+        const inputEl = el as HTMLInputElement;
+        inputEl.value = String(system.readField(binding.field) ?? "");
+        const unsub = system.onFieldChange(binding.field, (val) => {
+          inputEl.value = String(val ?? "");
+        });
+        unbindFns.push(unsub);
+        let timer: number | undefined;
+        const flush = () => {
+          if (timer !== undefined) {
+            clearTimeout(timer);
+            timer = undefined;
+          }
+          system.writeField(binding.field, tryParseNumber(inputEl.value));
+        };
+        const onInput = () => {
+          if (timer !== undefined) clearTimeout(timer);
+          timer = setTimeout(flush, modelDebounceMs);
+        };
+        const onBlur = () => {
+          if (timer !== undefined) {
+            clearTimeout(timer);
+            timer = undefined;
+          }
+          system.writeField(binding.field, tryParseNumber(inputEl.value));
+        };
+        inputEl.addEventListener("input", onInput);
+        inputEl.addEventListener("blur", onBlur);
+        unbindFns.push(() => {
+          inputEl.removeEventListener("input", onInput);
+          inputEl.removeEventListener("blur", onBlur);
+          if (timer !== undefined) clearTimeout(timer);
+        });
         break;
       }
     }

@@ -30,7 +30,7 @@ The format is `template | field1, field2, ...`. `{0}` is replaced by field1's va
 
 ### `mf-toggle`
 
-Toggles a CSS class based on a boolean field:
+Shows or hides an element by setting the `hidden` property based on a boolean field:
 
 ```html
 <div mf-toggle="bloodied">Bloodied!</div>
@@ -45,6 +45,24 @@ Wire DOM events to event emitter calls:
 ```
 
 The value format is `eventName:arg1,arg2` — calls `system.fire(eventName, args)`.
+
+### `mf-model`
+
+Two-way binding for form inputs. Sets the input's value from the field, and updates the field (with a configurable debounce) when the user types:
+
+```html
+<input mf-model="characterName">
+<input mf-model="hp" type="number">
+```
+
+Values are parsed as numbers when possible (matching `tryParseNumber` behavior). The debounce defaults to 200ms and flushes on blur — intermediate keystrokes are local to the input until the debounce fires or the element loses focus. Configure globally:
+
+```ts
+import { setModelDebounce } from 'mechflow'
+setModelDebounce(300) // global default, applied to all mf-model bindings
+```
+
+Under the hood, `mf-model` calls `system.writeField()` — a direct state mutation that bypasses the event pipeline. This is intentional: form inputs are UI convenience, not business logic.
 
 ## Initialization
 
@@ -68,16 +86,6 @@ flow('hp-bar', html)
 | Update received | Apply attribute/text/class change to matched element |
 | `disconnectedCallback` | Unsubscribe all bindings |
 | `attributeChangedCallback` | Not used by binding system; available for manual overrides |
-
-## Scope
-
-Bindings resolve field names against the system's field registry. A component can opt into a specific scope by setting the `mf-scope` attribute on the host element:
-
-```html
-<hp-bar mf-scope="player-1"></hp-bar>
-```
-
-The scope is passed through to the subscription layer, allowing the same component template to bind to different state instances.
 
 ## Constraints
 

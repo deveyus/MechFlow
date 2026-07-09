@@ -1,6 +1,6 @@
 {
   "name": "mechflow",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "exports": "./src/mod.ts",
   "tasks": {
     "test": "deno test src/",

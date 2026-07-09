@@ -50,6 +50,7 @@ System<S> {
   field(name: string): Field | undefined
   event(name: string): Event | undefined
   readField(name: string): unknown
+  writeField(name: string, value: unknown): void
   subscribe<E>(event, handler): SubscriptionBuilder<S>
   fire<E>(event, payload): TickResult<S>
   graph(): Map<string, string[]>
@@ -64,6 +65,7 @@ System<S> {
 | `field(name)` | Look up a field by name |
 | `event(name)` | Look up an event by name |
 | `readField(name)` | Read a field's current value |
+| `writeField(name, value)` | Set a field's value directly (bypasses event pipeline) |
 | `subscribe(event, handler)` | Register a subscriber (returns builder for ordering) |
 | `fire(event, payload)` | Emit an event, run subscribers, return tick result |
 | `graph()` | Introspect the subscriber ordering graph |
@@ -88,6 +90,16 @@ const unsub = system.onFieldChange('hp', (newVal, oldVal, fieldName) => {
 // later: unsub()
 ```
 
+### `writeField(name, value): void`
+
+Directly set a field's value. Bypasses the event/subscriber pipeline — no tick, no chain links, no ordering. Triggers `onFieldChange` callbacks with the old and new values. Intended for UI convenience (form bindings) where a full event-driven update would be overkill.
+
+```ts
+system.writeField('hp', 15)
+```
+
+Not a substitute for event-driven state changes. Prefer `system.fire()` for business logic.
+
 ### `graph(): Map<string, string[]>`
 
 Returns the subscriber dependency graph as adjacency lists. Each entry lists the subscriber's `before` targets; `after` targets are prefixed with `←`. Useful for debugging ordering.
@@ -98,6 +110,15 @@ Returns the subscriber dependency graph as adjacency lists. Each entry lists the
 ### `getSystem(): System | null`
 
 Set or retrieve the active system singleton. Required by the view layer and the standalone `subscribe()` function.
+
+### `setModelDebounce(ms: number): void`
+
+Set the global debounce interval (in milliseconds) for `mf-model` two-way bindings. Defaults to 200ms. Applied to all `mf-model` bindings globally — no per-field override.
+
+```ts
+import { setModelDebounce } from 'mechflow'
+setModelDebounce(300)
+```
 
 ```ts
 import { createSystem, useSystem } from 'mechflow'
@@ -239,6 +260,7 @@ The binding attributes (`mf-text`, `mf-bind:*`, `mf-toggle`, `mf-on:*`) are reso
 | `mf-text` | `mf-text="hp"` | Sets `textContent` to the field's current value |
 | `mf-bind:*` | `mf-bind:style="width:{0}% \| hpPercent"` | Binds an attribute to formatted field values |
 | `mf-toggle` | `mf-toggle="bloodied"` | Sets `hidden` property based on field truthiness |
+| `mf-model` | `mf-model="characterName"` | Two-way binding for form inputs (debounced, flush-on-blur) |
 | `mf-on:*` | `mf-on:click="takeDamage:5"` | Wires a DOM event to fire a system event |
 
 ### mf-bind format
