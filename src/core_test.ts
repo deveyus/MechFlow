@@ -593,7 +593,6 @@ Deno.test("multiple temp IDs across separate subscribe calls", () => {
   const e = event<{ n: number }>("tick");
   const sys = createSystem({ fields: [hp], events: [e] });
   useSystem(sys);
-  const ids: string[] = [];
   sys.subscribe(e, () => Ok({ hp: 1 })).id("a");
   sys.subscribe(e, () => Ok({ hp: 2 })).id("b");
   sys.subscribe(e, () => Ok({ hp: 3 })).id("c");
