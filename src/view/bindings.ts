@@ -104,7 +104,9 @@ export function bindComponent(host: HTMLElement, root: ShadowRoot): void {
       }
 
       case "bind": {
-        const vals: unknown[] = new Array(binding.fields.length).fill(undefined);
+        const vals: unknown[] = new Array(binding.fields.length).fill(
+          undefined,
+        );
         // Set initial values
         binding.fields.forEach((fieldName, i) => {
           vals[i] = system.readField(fieldName);
@@ -134,7 +136,10 @@ export function bindComponent(host: HTMLElement, root: ShadowRoot): void {
       case "on": {
         const evtObj = system.event(binding.targetEvent);
         if (!evtObj) {
-          console.warn(`mf-on: unknown event "${binding.targetEvent}" on element`, el);
+          console.warn(
+            `mf-on: unknown event "${binding.targetEvent}" on element`,
+            el,
+          );
           break;
         }
         const payload = binding.args.length === 0

@@ -35,7 +35,7 @@ export type Event<E, N extends string = string> = Brand<{
 export type Delta<T> = Partial<T>;
 
 export type StateShape<F extends Field<any, string>[]> = {
-  [K in F[number]as K["name"]]: K extends Field<infer V, string> ? V : never;
+  [K in F[number] as K["name"]]: K extends Field<infer V, string> ? V : never;
 };
 
 export type ChainLink<S> = {
@@ -61,7 +61,9 @@ export type SubscriberContext<E, S> = Readonly<{
   event: string;
 }>;
 
-export type SubscriberHandler<E, S> = (ctx: SubscriberContext<E, S>) => Result<Delta<S>, SubscriberError>;
+export type SubscriberHandler<E, S> = (
+  ctx: SubscriberContext<E, S>,
+) => Result<Delta<S>, SubscriberError>;
 
 export type PriorityHint = "early" | "late";
 

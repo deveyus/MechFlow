@@ -4,20 +4,20 @@
 let tmpCounter = 0;
 
 import type {
-  Field,
-  Event,
-  SubscriberRegistration,
-  SubscriberHandler,
-  StateShape,
-  PriorityHint,
-  SubscriberError,
-  FieldChangeCallback,
   Chain,
+  Event,
+  Field,
+  FieldChangeCallback,
+  PriorityHint,
+  StateShape,
+  SubscriberError,
+  SubscriberHandler,
+  SubscriberRegistration,
 } from "./types.ts";
 import { createChain } from "./chain.ts";
 import { resolveOrdering, visualizeGraph } from "./ordering.ts";
 import { SubscriptionBuilder } from "./subscribe.ts";
-import { field } from "./field.ts";
+import type { field } from "./field.ts";
 
 export type SystemConfig<F extends Field<any, string>[]> = {
   fields: F;
@@ -58,7 +58,10 @@ export function createSystem<F extends Field<any, string>[]>(
   const fieldMap = new Map<string, Field<any>>();
   const eventMap = new Map<string, Event<any>>();
   const subscribersByEvent = new Map<string, SubscriberRegistration<S>[]>();
-  const subscriberMapByEvent = new Map<string, Map<string, SubscriberRegistration<S>>>();
+  const subscriberMapByEvent = new Map<
+    string,
+    Map<string, SubscriberRegistration<S>>
+  >();
   const resolvedOrders = new Map<string, string[]>();
   const resolvedHandlers = new Map<string, HandlerEntry[]>();
   let tickCounter = 0;
@@ -241,8 +244,10 @@ export function createSystem<F extends Field<any, string>[]>(
     // Register immediately with a temp ID
     const tempId = `_tmp_${++tmpCounter}`;
     let currentReg: SubscriberRegistration<S> = {
-      id: tempId, handler: handler as SubscriberHandler<any, S>,
-      before: [], after: [],
+      id: tempId,
+      handler: handler as SubscriberHandler<any, S>,
+      before: [],
+      after: [],
     };
     const regList = subs!;
     regList.push(currentReg);
@@ -265,8 +270,7 @@ export function createSystem<F extends Field<any, string>[]>(
         }
       }
 
-      const sameOrdering =
-        arraysEqual(reg.before, currentReg.before) &&
+      const sameOrdering = arraysEqual(reg.before, currentReg.before) &&
         arraysEqual(reg.after, currentReg.after) &&
         reg.priority === currentReg.priority;
 
@@ -303,7 +307,9 @@ export function createSystem<F extends Field<any, string>[]>(
       const result = resolveOrdering(regList);
       if (result.cycle && result.cycle.length > 0) {
         throw new Error(
-          `Cycle detected after adding subscriber "${reg.id}" to event "${evt.name}": ${result.cycle.join(" → ")}`,
+          `Cycle detected after adding subscriber "${reg.id}" to event "${evt.name}": ${
+            result.cycle.join(" → ")
+          }`,
         );
       }
       resolvedOrders.set(evt.name, result.order);

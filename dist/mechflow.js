@@ -54,7 +54,9 @@ function resolveOrdering(subscribers) {
         adjacency.get(sub.id).push(target);
         inDegree.set(target, (inDegree.get(target) ?? 0) + 1);
       } else {
-        console.warn(`ordering: subscriber "${sub.id}" references unknown id "${target}" in before()`);
+        console.warn(
+          `ordering: subscriber "${sub.id}" references unknown id "${target}" in before()`
+        );
       }
     }
     for (const target of sub.after) {
@@ -62,7 +64,9 @@ function resolveOrdering(subscribers) {
         adjacency.get(target).push(sub.id);
         inDegree.set(sub.id, (inDegree.get(sub.id) ?? 0) + 1);
       } else {
-        console.warn(`ordering: subscriber "${sub.id}" references unknown id "${target}" in after()`);
+        console.warn(
+          `ordering: subscriber "${sub.id}" references unknown id "${target}" in after()`
+        );
       }
     }
   }
@@ -580,7 +584,9 @@ function bindComponent(host, root) {
         break;
       }
       case "bind": {
-        const vals = new Array(binding.fields.length).fill(void 0);
+        const vals = new Array(binding.fields.length).fill(
+          void 0
+        );
         binding.fields.forEach((fieldName, i) => {
           vals[i] = system.readField(fieldName);
         });
@@ -606,7 +612,10 @@ function bindComponent(host, root) {
       case "on": {
         const evtObj = system.event(binding.targetEvent);
         if (!evtObj) {
-          console.warn(`mf-on: unknown event "${binding.targetEvent}" on element`, el);
+          console.warn(
+            `mf-on: unknown event "${binding.targetEvent}" on element`,
+            el
+          );
           break;
         }
         const payload = binding.args.length === 0 ? void 0 : binding.args.length === 1 ? tryParseNumber(binding.args[0]) : binding.args.map((a) => tryParseNumber(a));

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 MechFlow contributors
 // SPDX-License-Identifier: EUPL-1.2
 
-import type { SubscriberRegistration, PriorityHint } from "./types.ts";
+import type { PriorityHint, SubscriberRegistration } from "./types.ts";
 
 export type Graph = Map<string, string[]>;
 
@@ -28,7 +28,9 @@ export function resolveOrdering(
         adjacency.get(sub.id)!.push(target);
         inDegree.set(target, (inDegree.get(target) ?? 0) + 1);
       } else {
-        console.warn(`ordering: subscriber "${sub.id}" references unknown id "${target}" in before()`);
+        console.warn(
+          `ordering: subscriber "${sub.id}" references unknown id "${target}" in before()`,
+        );
       }
     }
     for (const target of sub.after) {
@@ -36,7 +38,9 @@ export function resolveOrdering(
         adjacency.get(target)!.push(sub.id);
         inDegree.set(sub.id, (inDegree.get(sub.id) ?? 0) + 1);
       } else {
-        console.warn(`ordering: subscriber "${sub.id}" references unknown id "${target}" in after()`);
+        console.warn(
+          `ordering: subscriber "${sub.id}" references unknown id "${target}" in after()`,
+        );
       }
     }
   }

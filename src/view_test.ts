@@ -26,7 +26,9 @@ Deno.test("parseBinding mf-toggle returns toggle binding", () => {
 });
 
 Deno.test("parseBinding mf-bind with pipe uses template and fields", () => {
-  const result = parseBinding(mockEl({ "mf-bind:class": "status-{0} | hp, mana" }));
+  const result = parseBinding(
+    mockEl({ "mf-bind:class": "status-{0} | hp, mana" }),
+  );
   assertEquals(result, {
     type: "bind",
     attr: "class",
@@ -71,7 +73,9 @@ Deno.test("parseBinding no matching attributes returns null", () => {
 });
 
 Deno.test("parseBinding first matching attribute wins (mf-text before mf-bind)", () => {
-  const result = parseBinding(mockEl({ "mf-text": "hp", "mf-bind:class": "foo | hp" }));
+  const result = parseBinding(
+    mockEl({ "mf-text": "hp", "mf-bind:class": "foo | hp" }),
+  );
   assertEquals(result, { type: "text", field: "hp" });
 });
 

@@ -1,9 +1,12 @@
 // SPDX-FileCopyrightText: 2026 MechFlow contributors
 // SPDX-License-Identifier: EUPL-1.2
 
-import { field, event, createSystem, useSystem, Ok } from "../src/mod.ts";
+import { createSystem, event, field, Ok, useSystem } from "../src/mod.ts";
 import { assertEquals } from "jsr:@std/assert";
-import type { SubscriberRegistration, PriorityHint } from "../src/core/types.ts";
+import type {
+  PriorityHint,
+  SubscriberRegistration,
+} from "../src/core/types.ts";
 import { resolveOrdering } from "../src/core/ordering.ts";
 import { SubscriptionBuilder } from "../src/core/subscribe.ts";
 
@@ -312,7 +315,9 @@ Deno.test("handler Err result leaves state unchanged", () => {
   const e = event<{ n: number }>("tick");
   const sys = createSystem({ fields: [hp], events: [e] });
   useSystem(sys);
-  sys.subscribe(e, () => ({ ok: false, error: { message: "nope" } })).id("fail");
+  sys.subscribe(e, () => ({ ok: false, error: { message: "nope" } })).id(
+    "fail",
+  );
   const result = sys.fire(e, { n: 0 });
   assertEquals(result.state.hp, 20);
   assertEquals(result.chain.at(1)?.error?.message, "nope");
@@ -323,7 +328,9 @@ Deno.test("handler throw is caught and recorded as error link", () => {
   const e = event<{ n: number }>("tick");
   const sys = createSystem({ fields: [hp], events: [e] });
   useSystem(sys);
-  sys.subscribe(e, () => { throw "raw string" }).id("boom");
+  sys.subscribe(e, () => {
+    throw "raw string";
+  }).id("boom");
   const result = sys.fire(e, { n: 0 });
   assertEquals(result.chain.at(1)?.error?.message, "raw string");
 });
@@ -333,7 +340,9 @@ Deno.test("non-Error throw value is stringified in error message", () => {
   const e = event<{ n: number }>("tick");
   const sys = createSystem({ fields: [hp], events: [e] });
   useSystem(sys);
-  sys.subscribe(e, () => { throw null }).id("null-boom");
+  sys.subscribe(e, () => {
+    throw null;
+  }).id("null-boom");
   const result = sys.fire(e, { n: 0 });
   assertEquals(result.chain.at(1)?.error?.message, "null");
 });
@@ -344,8 +353,10 @@ Deno.test("chain.current skips error links to last success", () => {
   const sys = createSystem({ fields: [hp], events: [e] });
   useSystem(sys);
   sys.subscribe(e, () => Ok({ hp: 10 })).id("ok1");
-  sys.subscribe(e, () => ({ ok: false, error: { message: "fail" } })).id("err").after("ok1");
-  sys.subscribe(e, (ctx) => Ok({ hp: ctx.chain.current.hp + 5 })).id("ok2").after("err");
+  sys.subscribe(e, () => ({ ok: false, error: { message: "fail" } })).id("err")
+    .after("ok1");
+  sys.subscribe(e, (ctx) => Ok({ hp: ctx.chain.current.hp + 5 })).id("ok2")
+    .after("err");
   const result = sys.fire(e, { n: 0 });
   assertEquals(result.state.hp, 15);
   assertEquals(result.chain.current.hp, 15);
@@ -358,7 +369,10 @@ Deno.test("fire notifies onFieldChange after all handlers run", () => {
   const sys = createSystem({ fields: [hp], events: [e] });
   useSystem(sys);
   const seen: Array<{ newVal: unknown; oldVal: unknown; key: string }> = [];
-  sys.onFieldChange("hp", (newVal, oldVal, key) => seen.push({ newVal, oldVal, key }));
+  sys.onFieldChange(
+    "hp",
+    (newVal, oldVal, key) => seen.push({ newVal, oldVal, key }),
+  );
   sys.subscribe(e, () => Ok({ hp: 15 })).id("set-hp");
   sys.fire(e, { n: 0 });
   assertEquals(seen.length, 1);
@@ -416,8 +430,14 @@ Deno.test("all handlers receive the same ctx object reference", () => {
   const sys = createSystem({ fields: [hp], events: [e] });
   useSystem(sys);
   let refs: unknown[] = [];
-  sys.subscribe(e, (ctx) => { refs.push(ctx); return Ok({ hp: 15 }); }).id("a");
-  sys.subscribe(e, (ctx) => { refs.push(ctx); return Ok({ hp: 10 }); }).id("b");
+  sys.subscribe(e, (ctx) => {
+    refs.push(ctx);
+    return Ok({ hp: 15 });
+  }).id("a");
+  sys.subscribe(e, (ctx) => {
+    refs.push(ctx);
+    return Ok({ hp: 10 });
+  }).id("b");
   sys.fire(e, { n: 0 });
   assertEquals(refs.length, 2);
   assertEquals(refs[0], refs[1]);
@@ -538,11 +558,17 @@ Deno.test("reRegister after boot with ordering change triggers re-resolve", () =
   const sys = createSystem({ fields: [hp], events: [e] });
   useSystem(sys);
   const order: string[] = [];
-  sys.subscribe(e, () => { order.push("x"); return Ok({ hp: 10 }); }).id("x");
+  sys.subscribe(e, () => {
+    order.push("x");
+    return Ok({ hp: 10 });
+  }).id("x");
   sys.fire(e, { n: 0 });
   assertEquals(order, ["x"]);
   // Late subscriber with ordering change — triggers full re-resolve
-  sys.subscribe(e, () => { order.push("y"); return Ok({ hp: 5 }); }).id("y").before("x");
+  sys.subscribe(e, () => {
+    order.push("y");
+    return Ok({ hp: 5 });
+  }).id("y").before("x");
   order.length = 0;
   sys.fire(e, { n: 0 });
   assertEquals(order, ["y", "x"]);
@@ -578,8 +604,19 @@ Deno.test("multiple temp IDs across separate subscribe calls", () => {
 
 // ── resolveOrdering() property, control-flow, and adjacent tests ──
 
-function makeSub(id: string, before: string[] = [], after: string[] = [], priority?: PriorityHint): SubscriberRegistration<any> {
-  return { id, handler: () => ({ ok: true, value: {} }), before, after, priority };
+function makeSub(
+  id: string,
+  before: string[] = [],
+  after: string[] = [],
+  priority?: PriorityHint,
+): SubscriberRegistration<any> {
+  return {
+    id,
+    handler: () => ({ ok: true, value: {} }),
+    before,
+    after,
+    priority,
+  };
 }
 
 Deno.test("resolveOrdering empty list returns empty order", () => {
@@ -595,7 +632,11 @@ Deno.test("resolveOrdering single subscriber returns [id]", () => {
 });
 
 Deno.test("resolveOrdering linear chain A→B→C", () => {
-  const result = resolveOrdering([makeSub("a", ["b"]), makeSub("b", ["c"]), makeSub("c")]);
+  const result = resolveOrdering([
+    makeSub("a", ["b"]),
+    makeSub("b", ["c"]),
+    makeSub("c"),
+  ]);
   assertEquals(result.order, ["a", "b", "c"]);
   assertEquals(result.cycle, undefined);
 });
@@ -642,9 +683,9 @@ Deno.test("resolveOrdering full cycle A→B→C→A returns empty order plus cyc
 Deno.test("resolveOrdering partial cycle returns ordered prefix plus cycle", () => {
   const result = resolveOrdering([
     makeSub("a", ["b"]),
-    makeSub("b"),          // a before b — fine
+    makeSub("b"), // a before b — fine
     makeSub("c", ["d"]),
-    makeSub("d", ["c"]),   // c↔d cycle
+    makeSub("d", ["c"]), // c↔d cycle
   ]);
   assertEquals(result.order, ["a", "b"]);
   assertEquals(result.cycle!.length >= 2, true);
@@ -661,9 +702,9 @@ Deno.test("resolveOrdering priority within single layer", () => {
 
 Deno.test("resolveOrdering priority never crosses layer boundary", () => {
   const result = resolveOrdering([
-    makeSub("late1", ["mid1"], [], "late"),   // must run before mid1
-    makeSub("mid1", ["early1"]),               // must run before early1
-    makeSub("early1", [], [], "early"),        // after mid1
+    makeSub("late1", ["mid1"], [], "late"), // must run before mid1
+    makeSub("mid1", ["early1"]), // must run before early1
+    makeSub("early1", [], [], "early"), // after mid1
   ]);
   // Layer order: late1(0) → mid1(1) → early1(2)
   // Priority reorders within each layer (only one node per layer here)
@@ -672,7 +713,7 @@ Deno.test("resolveOrdering priority never crosses layer boundary", () => {
 
 Deno.test("resolveOrdering duplicate before/after entries are harmless", () => {
   const result = resolveOrdering([
-    makeSub("a", ["b", "b"]),  // duplicate before
+    makeSub("a", ["b", "b"]), // duplicate before
     makeSub("b"),
   ]);
   assertEquals(result.order, ["a", "b"]);
@@ -683,7 +724,7 @@ Deno.test("resolveOrdering before and after combined", () => {
   const result = resolveOrdering([
     makeSub("a", ["c"]),
     makeSub("c"),
-    makeSub("b", [], ["c"]),  // b after c → c before b
+    makeSub("b", [], ["c"]), // b after c → c before b
   ]);
   assertEquals(result.order, ["a", "c", "b"]);
 });

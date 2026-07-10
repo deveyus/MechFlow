@@ -1,20 +1,33 @@
 // SPDX-FileCopyrightText: 2026 MechFlow contributors
 // SPDX-License-Identifier: EUPL-1.2
 
-import type { Field, Event, SubscriberRegistration, SubscriberHandler, FieldChangeCallback } from "./core/types.ts";
-import type { Chain, ChainLink, SubscriberContext, SubscriberError, PriorityHint, Delta } from "./core/types.ts";
-import type { SystemConfig, System, TickResult } from "./core/system.ts";
+import type {
+  Event,
+  Field,
+  FieldChangeCallback,
+  SubscriberHandler,
+  SubscriberRegistration,
+} from "./core/types.ts";
+import type {
+  Chain,
+  ChainLink,
+  Delta,
+  PriorityHint,
+  SubscriberContext,
+  SubscriberError,
+} from "./core/types.ts";
+import type { System, SystemConfig, TickResult } from "./core/system.ts";
 import type { SubscriptionBuilder } from "./core/subscribe.ts";
 import type { StateShape } from "./core/types.ts";
 import { getSystem } from "./core/system.ts";
 
 export { field } from "./core/field.ts";
 export { event } from "./core/event.ts";
-export { createSystem, useSystem, getSystem } from "./core/system.ts";
+export { createSystem, getSystem, useSystem } from "./core/system.ts";
 export { flow } from "./view/flow.ts";
 export { setModelDebounce } from "./view/bindings.ts";
-export { Ok, Err } from "./core/types.ts";
-export type { Result, OkResult, ErrResult } from "./core/types.ts";
+export { Err, Ok } from "./core/types.ts";
+export type { ErrResult, OkResult, Result } from "./core/types.ts";
 
 export function subscribe<E>(
   evt: Event<E>,
@@ -26,20 +39,20 @@ export function subscribe<E>(
 }
 
 export type {
-  Field,
-  Event,
   Chain,
   ChainLink,
+  Delta,
+  Event,
+  Field,
+  FieldChangeCallback,
+  PriorityHint,
+  StateShape,
   SubscriberContext,
   SubscriberError,
-  PriorityHint,
-  Delta,
-  FieldChangeCallback,
-  SubscriptionBuilder,
-  SubscriberRegistration,
   SubscriberHandler,
-  SystemConfig,
+  SubscriberRegistration,
+  SubscriptionBuilder,
   System,
+  SystemConfig,
   TickResult,
-  StateShape,
 };

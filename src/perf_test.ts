@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: 2026 MechFlow contributors
 // SPDX-License-Identifier: EUPL-1.2
 
-import { field, event, createSystem, Ok } from "./mod.ts";
+import { createSystem, event, field, Ok } from "./mod.ts";
 
-function benchmarkSubscriberCount(count: number): { count: number; bootMs: number; tickMs: number; opsPerSec: number } {
+function benchmarkSubscriberCount(
+  count: number,
+): { count: number; bootMs: number; tickMs: number; opsPerSec: number } {
   const f = field("val", { default: 0 });
   const evt = event<{ x: number }>("tick");
 
@@ -43,25 +45,35 @@ function benchmarkSubscriberCount(count: number): { count: number; bootMs: numbe
 
 Deno.test("perf: 10 subscribers", () => {
   const r = benchmarkSubscriberCount(10);
-  console.log(`  ${r.count} subs: ${r.tickMs}ms/tick (${r.opsPerSec} ops/sec) — boot: ${r.bootMs}ms`);
+  console.log(
+    `  ${r.count} subs: ${r.tickMs}ms/tick (${r.opsPerSec} ops/sec) — boot: ${r.bootMs}ms`,
+  );
 });
 
 Deno.test("perf: 100 subscribers", () => {
   const r = benchmarkSubscriberCount(100);
-  console.log(`  ${r.count} subs: ${r.tickMs}ms/tick (${r.opsPerSec} ops/sec) — boot: ${r.bootMs}ms`);
+  console.log(
+    `  ${r.count} subs: ${r.tickMs}ms/tick (${r.opsPerSec} ops/sec) — boot: ${r.bootMs}ms`,
+  );
 });
 
 Deno.test("perf: 500 subscribers", () => {
   const r = benchmarkSubscriberCount(500);
-  console.log(`  ${r.count} subs: ${r.tickMs}ms/tick (${r.opsPerSec} ops/sec) — boot: ${r.bootMs}ms`);
+  console.log(
+    `  ${r.count} subs: ${r.tickMs}ms/tick (${r.opsPerSec} ops/sec) — boot: ${r.bootMs}ms`,
+  );
 });
 
 Deno.test("perf: 2000 subscribers", () => {
   const r = benchmarkSubscriberCount(2000);
-  console.log(`  ${r.count} subs: ${r.tickMs}ms/tick (${r.opsPerSec} ops/sec) — boot: ${r.bootMs}ms`);
+  console.log(
+    `  ${r.count} subs: ${r.tickMs}ms/tick (${r.opsPerSec} ops/sec) — boot: ${r.bootMs}ms`,
+  );
 });
 
-function benchmarkWriteField(count: number): { count: number; writeMs: number; opsPerSec: number } {
+function benchmarkWriteField(
+  count: number,
+): { count: number; writeMs: number; opsPerSec: number } {
   const f = field("val", { default: 0 });
   const system = createSystem({ fields: [f], events: [] });
 
@@ -87,15 +99,21 @@ function benchmarkWriteField(count: number): { count: number; writeMs: number; o
 
 Deno.test("perf: writeField — 0 listeners", () => {
   const r = benchmarkWriteField(0);
-  console.log(`  ${r.count} listeners: ${r.writeMs}ms/write (${r.opsPerSec} writes/sec)`);
+  console.log(
+    `  ${r.count} listeners: ${r.writeMs}ms/write (${r.opsPerSec} writes/sec)`,
+  );
 });
 
 Deno.test("perf: writeField — 10 listeners", () => {
   const r = benchmarkWriteField(10);
-  console.log(`  ${r.count} listeners: ${r.writeMs}ms/write (${r.opsPerSec} writes/sec)`);
+  console.log(
+    `  ${r.count} listeners: ${r.writeMs}ms/write (${r.opsPerSec} writes/sec)`,
+  );
 });
 
 Deno.test("perf: writeField — 100 listeners", () => {
   const r = benchmarkWriteField(100);
-  console.log(`  ${r.count} listeners: ${r.writeMs}ms/write (${r.opsPerSec} writes/sec)`);
+  console.log(
+    `  ${r.count} listeners: ${r.writeMs}ms/write (${r.opsPerSec} writes/sec)`,
+  );
 });

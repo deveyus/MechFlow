@@ -1,7 +1,12 @@
 // SPDX-FileCopyrightText: 2026 MechFlow contributors
 // SPDX-License-Identifier: EUPL-1.2
 
-import type { Event, SubscriberHandler, SubscriberRegistration, PriorityHint } from "./types.ts";
+import type {
+  Event,
+  PriorityHint,
+  SubscriberHandler,
+  SubscriberRegistration,
+} from "./types.ts";
 
 let anonCounter = 0;
 

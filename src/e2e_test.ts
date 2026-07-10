@@ -15,7 +15,11 @@ function startServer(): Deno.HttpServer {
     try {
       const content = Deno.readFileSync(filePath);
       const ext = filePath.split(".").pop();
-      const ct = ext === "html" ? "text/html" : ext === "js" ? "application/javascript" : "application/octet-stream";
+      const ct = ext === "html"
+        ? "text/html"
+        : ext === "js"
+        ? "application/javascript"
+        : "application/octet-stream";
       return new Response(content, { headers: { "content-type": ct } });
     } catch {
       return new Response("Not found", { status: 404 });
@@ -30,11 +34,15 @@ interface CDPClient {
 }
 
 async function connectCDP(port: number): Promise<CDPClient> {
-  const targets = await (await fetch(`http://localhost:${port}/json`)).json() as { webSocketDebuggerUrl: string }[];
+  const targets = await (await fetch(`http://localhost:${port}/json`))
+    .json() as { webSocketDebuggerUrl: string }[];
   const wsUrl = targets[0].webSocketDebuggerUrl;
   const ws = new WebSocket(wsUrl);
 
-  const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: unknown) => void }>();
+  const pending = new Map<
+    number,
+    { resolve: (v: unknown) => void; reject: (e: unknown) => void }
+  >();
   const eventHandlers = new Map<string, Set<(params: unknown) => void>>();
   let msgId = 0;
 
@@ -72,7 +80,9 @@ async function connectCDP(port: number): Promise<CDPClient> {
       if (!eventHandlers.has(method)) eventHandlers.set(method, new Set());
       eventHandlers.get(method)!.add(cb);
     },
-    close() { ws.close(); },
+    close() {
+      ws.close();
+    },
   };
 }
 
@@ -86,7 +96,8 @@ async function evaluate(cdp: CDPClient, expression: string): Promise<unknown> {
 
 async function settle(cdp: CDPClient): Promise<void> {
   await cdp.send("Runtime.evaluate", {
-    expression: "new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))",
+    expression:
+      "new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))",
     awaitPromise: true,
   });
 }
@@ -136,12 +147,19 @@ async function main() {
   const pageErrors: string[] = [];
   cdp.onEvent("Runtime.consoleAPICalled", (params: any) => {
     const args = params.args.map((a: any) => a.value ?? a.description ?? "");
-    if (args.some((a: string) => a.includes("error") || a.includes("Error") || a.includes("TypeError"))) {
+    if (
+      args.some((a: string) =>
+        a.includes("error") || a.includes("Error") || a.includes("TypeError")
+      )
+    ) {
       pageErrors.push(args.join(" "));
     }
   });
   cdp.onEvent("Runtime.exceptionThrown", (params: any) => {
-    pageErrors.push(params.exceptionDetails?.text + " " + (params.exceptionDetails?.exception?.description ?? ""));
+    pageErrors.push(
+      params.exceptionDetails?.text + " " +
+        (params.exceptionDetails?.exception?.description ?? ""),
+    );
   });
   await cdp.send("Runtime.enable");
 
@@ -159,22 +177,26 @@ async function main() {
   try {
     // ── Test 1: initial values ──
     {
-      const hp = await evaluate(cdp,
+      const hp = await evaluate(
+        cdp,
         `document.querySelector('hp-bar').shadowRoot.querySelector('[mf-text="hp"]').textContent`,
       );
       assertEquals(hp, "20", "initial HP");
 
-      const hpMax = await evaluate(cdp,
+      const hpMax = await evaluate(
+        cdp,
         `document.querySelector('hp-bar').shadowRoot.querySelector('[mf-text="hpMax"]').textContent`,
       );
       assertEquals(hpMax, "20", "initial HP max");
 
-      const pct = await evaluate(cdp,
+      const pct = await evaluate(
+        cdp,
         `document.querySelector('hp-bar').shadowRoot.querySelector('.hp-fill').style.width`,
       );
       assertEquals(pct, "100%", "initial HP percent");
 
-      const bloodiedHidden = await evaluate(cdp,
+      const bloodiedHidden = await evaluate(
+        cdp,
         `document.querySelector('hp-bar').shadowRoot.querySelector('[mf-toggle="bloodied"]').hidden`,
       );
       assertEquals(bloodiedHidden, true, "initial not bloodied");
@@ -187,12 +209,14 @@ async function main() {
       await evaluate(cdp, `document.getElementById('btn-damage-5').click()`);
       await settle(cdp);
 
-      const hp = await evaluate(cdp,
+      const hp = await evaluate(
+        cdp,
         `document.querySelector('hp-bar').shadowRoot.querySelector('[mf-text="hp"]').textContent`,
       );
       assertEquals(hp, "15", "HP after 5 damage");
 
-      const pct = await evaluate(cdp,
+      const pct = await evaluate(
+        cdp,
         `document.querySelector('hp-bar').shadowRoot.querySelector('.hp-fill').style.width`,
       );
       assertEquals(pct, "75%", "HP percent after damage");
@@ -208,12 +232,14 @@ async function main() {
       await evaluate(cdp, `document.getElementById('btn-damage-15').click()`);
       await settle(cdp);
 
-      const status = await evaluate(cdp,
+      const status = await evaluate(
+        cdp,
         `document.querySelector('status-badge').shadowRoot.querySelector('[mf-text="status"]').textContent`,
       );
       assertEquals(status, "bloodied", "status should be bloodied");
 
-      const bloodiedHidden = await evaluate(cdp,
+      const bloodiedHidden = await evaluate(
+        cdp,
         `document.querySelector('hp-bar').shadowRoot.querySelector('[mf-toggle="bloodied"]').hidden`,
       );
       assertEquals(bloodiedHidden, false, "BLOODIED tag visible");
@@ -231,20 +257,31 @@ async function main() {
       await evaluate(cdp, `document.getElementById('btn-heal-6').click()`);
       await settle(cdp);
 
-      const hp = await evaluate(cdp,
+      const hp = await evaluate(
+        cdp,
         `document.querySelector('hp-bar').shadowRoot.querySelector('[mf-text="hp"]').textContent`,
       );
       assertEquals(hp, "11", "HP after damage 15 + heal 6");
 
-      const bloodiedHidden = await evaluate(cdp,
+      const bloodiedHidden = await evaluate(
+        cdp,
         `document.querySelector('hp-bar').shadowRoot.querySelector('[mf-toggle="bloodied"]').hidden`,
       );
-      assertEquals(bloodiedHidden, true, "bloodied tag hidden after heal above half");
+      assertEquals(
+        bloodiedHidden,
+        true,
+        "bloodied tag hidden after heal above half",
+      );
 
-      const statusText = await evaluate(cdp,
+      const statusText = await evaluate(
+        cdp,
         `document.querySelector('status-badge').shadowRoot.querySelector('[mf-text="status"]').textContent`,
       );
-      assertEquals(statusText, "healthy", "status text restored to healthy after heal");
+      assertEquals(
+        statusText,
+        "healthy",
+        "status text restored to healthy after heal",
+      );
 
       console.log("  ✓ heal restores HP");
     }
@@ -257,7 +294,8 @@ async function main() {
       await evaluate(cdp, `document.getElementById('btn-temp-7').click()`);
       await settle(cdp);
 
-      const tempBefore = await evaluate(cdp,
+      const tempBefore = await evaluate(
+        cdp,
         `document.querySelector('hp-bar').shadowRoot.querySelector('.temp-hp').textContent`,
       );
       assertEquals(tempBefore, "7", "temp HP 7");
@@ -265,12 +303,14 @@ async function main() {
       await evaluate(cdp, `document.getElementById('btn-damage-5').click()`);
       await settle(cdp);
 
-      const hp = await evaluate(cdp,
+      const hp = await evaluate(
+        cdp,
         `document.querySelector('hp-bar').shadowRoot.querySelector('[mf-text="hp"]').textContent`,
       );
       assertEquals(hp, "20", "HP unchanged after damage absorbed by temp");
 
-      const tempAfter = await evaluate(cdp,
+      const tempAfter = await evaluate(
+        cdp,
         `document.querySelector('hp-bar').shadowRoot.querySelector('.temp-hp').textContent`,
       );
       assertEquals(tempAfter, "2", "temp HP 2 remaining");
@@ -281,14 +321,18 @@ async function main() {
     if (pageErrors.length > 0) {
       console.log("\n⚠️  Page errors detected:");
       for (const e of pageErrors) console.log("  ", e);
-      throw new Error(`E2E test failed: ${pageErrors.length} page error(s) detected`);
+      throw new Error(
+        `E2E test failed: ${pageErrors.length} page error(s) detected`,
+      );
     }
 
     console.log("\n✅ All e2e tests passed!");
   } finally {
     cdp.close();
     proc.kill("SIGKILL");
-    try { await proc.status; } catch {}
+    try {
+      await proc.status;
+    } catch {}
     await sv.shutdown();
   }
 }
