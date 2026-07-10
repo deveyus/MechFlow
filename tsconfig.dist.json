@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": false,
+    "skipLibCheck": true
+  },
+  "include": ["src/mod.ts", "src/core/*.ts", "src/view/*.ts"]
+}
