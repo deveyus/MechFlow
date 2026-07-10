@@ -2,7 +2,7 @@
 
 **Deterministic state management for applications that can't afford surprises.**
 
-A zero-dependency reactive library where ordering is declared, errors never abort, and every state change leaves a receipt.
+A zero-dependency reactive library where ordering is declared, errors never abort, and every state change leaves a receipt. **3.2KB minified + gzipped.**
 
 ---
 
@@ -128,7 +128,7 @@ Every state library makes tradeoffs. Here's how MechFlow compares:
 | **Error isolation** | One reducer throws, the whole store is undefined | A computed throws, the reactive graph poisons | A subscriber throws, the whole update drops | **Per-subscriber `Result` — failing never aborts the tick** |
 | **Audit trail** | DevTools only in development | None | None | **Chain object is always produced — production-grade tracing** |
 | **Dependency tracking** | Manual `mapStateToProps`, selectors | Implicit (getter interception) | Manual selectors, shallow compare | **Explicit — subscribers declare inputs via the chain** |
-| **Bundle size** | ~12KB (RTK) | ~16KB | ~2KB | **17KB self-contained** |
+| **Bundle size** | ~12KB (RTK) | ~16KB | ~2KB | **8.3KB minified / 3.2KB gzipped** |
 | **Runtime deps** | Immer, Redux core, thunks etc. | None | None | **Zero** |
 
 ---
@@ -258,7 +258,7 @@ Tick throughput on commodity hardware (single thread, no JIT warmup, Deno 2.7):
 
 Boot runs once on the first `fire()` — it resolves subscriber ordering and builds the handler dispatch array. Subsequent ticks dispatch a flat array with a reusable context object, no Map lookups, no closures, and no class instantiation in the inner loop.
 
-**Bundle:** 17KB self-contained ESM (zero runtime dependencies).
+**Bundle:** 8.3KB minified, 3.2KB minified + gzipped (zero runtime dependencies).
 
 ## Install
 

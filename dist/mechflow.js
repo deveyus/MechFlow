@@ -285,6 +285,14 @@ function createSystem(config) {
     readField(name) {
       return state[name];
     },
+    writeField(name, value) {
+      const oldVal = state[name];
+      state = { ...state, [name]: value };
+      const cbs = fieldChangeListeners.get(name);
+      if (cbs) {
+        for (const cb of cbs) cb(value, oldVal, name);
+      }
+    },
     subscribe(evt, handler) {
       return new SubscriptionBuilder(evt, handler);
     },
@@ -491,6 +499,10 @@ function event(name) {
 }
 
 // src/view/bindings.ts
+var modelDebounceMs = 200;
+function setModelDebounce(ms) {
+  modelDebounceMs = ms;
+}
 function parseBindAttr(name) {
   const match = name.match(/^mf-bind:(.+)$/);
   if (!match) return null;
@@ -508,6 +520,9 @@ function parseBinding(el) {
     }
     if (attr === "mf-toggle") {
       return { type: "toggle", field: el.getAttribute(attr) };
+    }
+    if (attr === "mf-model") {
+      return { type: "model", field: el.getAttribute(attr) };
     }
     const bind = parseBindAttr(attr);
     if (bind) {
@@ -602,6 +617,41 @@ function bindComponent(host, root) {
         unbindFns.push(() => el.removeEventListener(binding.event, handler));
         break;
       }
+      case "model": {
+        const inputEl = el;
+        inputEl.value = String(system.readField(binding.field) ?? "");
+        const unsub = system.onFieldChange(binding.field, (val) => {
+          inputEl.value = String(val ?? "");
+        });
+        unbindFns.push(unsub);
+        let timer;
+        const flush = () => {
+          if (timer !== void 0) {
+            clearTimeout(timer);
+            timer = void 0;
+          }
+          system.writeField(binding.field, tryParseNumber(inputEl.value));
+        };
+        const onInput = () => {
+          if (timer !== void 0) clearTimeout(timer);
+          timer = setTimeout(flush, modelDebounceMs);
+        };
+        const onBlur = () => {
+          if (timer !== void 0) {
+            clearTimeout(timer);
+            timer = void 0;
+          }
+          system.writeField(binding.field, tryParseNumber(inputEl.value));
+        };
+        inputEl.addEventListener("input", onInput);
+        inputEl.addEventListener("blur", onBlur);
+        unbindFns.push(() => {
+          inputEl.removeEventListener("input", onInput);
+          inputEl.removeEventListener("blur", onBlur);
+          if (timer !== void 0) clearTimeout(timer);
+        });
+        break;
+      }
     }
   }
   host.__mf_unbind = unbindFns;
@@ -669,6 +719,7 @@ export {
   field,
   flow,
   getSystem,
+  setModelDebounce,
   subscribe,
   useSystem
 };
